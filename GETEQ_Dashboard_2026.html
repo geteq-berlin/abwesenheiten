@@ -282,6 +282,7 @@ function mergeData(local, cloud) {
   return {
     entries: merged,
     nid: Math.max(local.nid||1, cloud.nid||1),
+    namen: Object.assign({}, local.namen||{}, cloud.namen||{}),
     meta: cloud.meta,
     ts: new Date().toISOString()
   };
@@ -290,7 +291,7 @@ function mergeData(local, cloud) {
 function triggerSave() {
   clearTimeout(saveDebounce);
   saveDebounce = setTimeout(async function(){
-    var payload = { entries: D.entries, nid: D.nid, ts: new Date().toISOString() };
+    var payload = { entries: D.entries, nid: D.nid, namen: D.namen, ts: new Date().toISOString() };
     // Immer lokal speichern
     try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify(payload)); } catch(e) {}
     // Cloud wenn verfügbar
@@ -362,7 +363,7 @@ var STAMM = [
 // ═══════════════════════════════════════════════════════
 //  APP-ZUSTAND
 // ═══════════════════════════════════════════════════════
-var D = {entries:[], nid:1, isHR:false, weekOff:0, view:'uebersicht', tab:'url',
+var D = {entries:[], nid:1, namen:{}, isHR:false, weekOff:0, view:'uebersicht', tab:'url',
   uf:{ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''}, editId:null};
 
 // ═══════════════════════════════════════════════════════
@@ -392,6 +393,7 @@ async function bootApp() {
   if (merged) {
     D.entries = merged.entries || [];
     D.nid     = merged.nid || 1;
+    D.namen   = merged.namen || {};
   }
 
   // 4. Falls Cloud-Stand neuer als lokal → lokal aktualisieren
@@ -418,6 +420,7 @@ function isoWeek(d){var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getD
 function weekDays(d){var day=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));var r=[];for(var i=0;i<5;i++){var x=new Date(mon);x.setDate(mon.getDate()+i);r.push(x);}return r;}
 function netDays(a,b){if(!a||!b)return 0;var s=new Date(a),e=new Date(b),n=0,d=new Date(s);if(s>e)return 0;while(d<=e){var ds=dISO(d);if(d.getDay()>0&&d.getDay()<6&&!FEIERTAGE[ds])n++;d.setDate(d.getDate()+1);}return n;}
 function getMa(id){return STAMM.find(function(m){return m.id===id;})||{f:'–',c:'–',ju:0,b:0,ue:0};}
+function getName(id){return D.namen[id]||id;}
 function artStyle(art){if(art==='Urlaub')return 'background:#E6F1FB;color:#0C447C';if(art==='Bildungsurlaub')return 'background:#D1FAE5;color:#065F46';if(art==='Abwesenheit')return 'background:#FAEEDA;color:#633806';if(art==='Fortbildung')return 'background:#FAECE7;color:#712B13';if(art==='Sonderurlaub')return 'background:#EEEDFE;color:#3C3489';if(art==='Freistellung')return 'background:#FBEAF0;color:#72243E';return 'background:#f1efe8;color:#5f5e5a';}
 function artClass(art){if(art==='Urlaub')return 'wk-url';if(art==='Abwesenheit')return 'wk-ab';if(art==='Fortbildung')return 'wk-fort';if(art==='Sonderurlaub'||art==='Freistellung')return 'wk-son';if(art==='Bildungsurlaub')return 'wk-bild';return 'wk-son';}
 function genStyle(g){if(g==='Ja')return 'background:#EAF3DE;color:#085041';if(g==='Nein')return 'background:#FCEBEB;color:#791F1F';return 'background:#f1efe8;color:#888';}
@@ -425,7 +428,7 @@ function genStyle(g){if(g==='Ja')return 'background:#EAF3DE;color:#085041';if(g=
 // ═══════════════════════════════════════════════════════
 //  NAVIGATION & RENDER
 // ═══════════════════════════════════════════════════════
-var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['eingabe','+ Neue Meldung'],['einst','⚙ Einstellungen']];
+var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['eingabe','+ Neue Meldung'],['stamm','👥 Stammdaten'],['einst','⚙ Einstellungen']];
 
 var G={
   view:function(name){D.view=name;renderNav();renderContent();window.scrollTo({top:0,behavior:'smooth'});},
@@ -472,6 +475,7 @@ function renderContent(){
   else if(D.view==='woche')html=viewWoche(entries,t);
   else if(D.view==='konto')html=viewKonto(entries,t);
   else if(D.view==='eingabe')html=viewEingabe(entries,t);
+  else if(D.view==='stamm')html=viewStammdaten();
   else if(D.view==='einst')html=viewEinstellungen(entries);
   document.getElementById('content').innerHTML=html;
 }
@@ -552,7 +556,7 @@ function viewKonto(entries,t){
     var restC=rest<0?'#791F1F':rest<5?'#B45309':'#1a1a1a';
     totA+=ma.ju;totG+=genT;totP+=planT;
     html+='<tr'+(rest<0?' style="background:#FFF0F0"':ue>0?' style="background:#FFFBE6"':'')+'>'; 
-    html+='<td><strong>'+ma.id+'</strong></td><td><span class="badge" style="background:#f1efe8;color:#5f5e5a">'+ma.c+'</span></td><td style="font-size:11px;color:#555">'+ma.f+'</td>';
+    html+='<td><strong>'+getName(ma.id)+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.id+'</span></td><td><span class="badge" style="background:#f1efe8;color:#5f5e5a">'+ma.c+'</span></td><td style="font-size:11px;color:#555">'+ma.f+'</td>';
     html+='<td style="text-align:center;font-weight:600">'+ma.ju+'</td><td style="text-align:center;color:#555">'+ma.b+'</td><td style="text-align:center;font-weight:'+(ue>0?'600':'400')+';color:'+(ue>0?'#085041':'#ccc')+'">'+ue+'</td>';
     html+='<td style="text-align:center;font-weight:500;color:#0C447C">'+(genT||'—')+'</td><td style="text-align:center;color:#888">'+(planT||'—')+'</td>';
     html+='<td style="text-align:center;font-weight:600;color:'+restC+'">'+rest+'</td>';
@@ -596,6 +600,43 @@ function viewEingabe(entries,t){
   else html+='<div style="font-size:12px;color:#aaa">Noch keine Einträge</div>';
   html+='</div></div></div>';
   return html;
+}
+
+
+function viewStammdaten(){
+  var rows='';
+  var aktiv=STAMM.filter(function(m){return m.on;});
+  aktiv.forEach(function(ma,i){
+    var val=(D.namen[ma.id]||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    rows+='<div style="display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:6px">'
+      +'<div><strong>'+ma.id+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.c+' &middot; '+ma.f+'</span></div>'
+      +'<input type="text" data-maid="'+ma.id+'" value="'+val+'" placeholder="Vorname Nachname"'
+      +' style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%">'
+      +'</div>';
+  });
+  return '<div style="max-width:620px">'
+    +'<div style="font-size:13px;color:#555;margin-bottom:14px;padding:10px 14px;background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px">'
+    +'&check; Namen werden in SharePoint gespeichert &ndash; nicht im &ouml;ffentlichen Code. Einmalig eintragen, f&uuml;r alle drei sichtbar.</div>'
+    +'<div style="display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:4px;padding:6px 10px;background:#f5f5f3;border-radius:6px;font-size:11px;font-weight:600;color:#888">'
+    +'<span>MA_ID / Code</span><span>Anzeigename (Klarname)</span></div>'
+    +rows
+    +'<div style="margin-top:16px;display:flex;gap:10px">'
+    +'<button class="btn btn-p" onclick="saveNamen()" style="padding:9px 20px;font-weight:600">&starf; Speichern (SharePoint)</button>'
+    +'<button class="btn btn-s btn-sm" onclick="clearNamen()">Alle l&ouml;schen</button>'
+    +'</div></div>';
+}
+
+function saveNamen(){
+  document.querySelectorAll('[data-maid]').forEach(function(inp){
+    var id=inp.getAttribute('data-maid');
+    D.namen[id]=inp.value.trim();
+  });
+  triggerSave();
+  flash('Namen gespeichert ✓');
+}
+function clearNamen(){
+  if(!confirm('Alle Namen löschen?'))return;
+  D.namen={};triggerSave();renderContent();
 }
 
 function viewEinstellungen(entries){
