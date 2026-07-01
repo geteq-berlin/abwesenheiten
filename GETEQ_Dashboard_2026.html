@@ -454,15 +454,15 @@ function renderHeader(){
 
 function renderNav(){
   var offen=D.entries.filter(function(e){return e.gen==='Ausstehend';}).length;
-  var html='<div class="nav-bar" id="nav-bar">';
+  var html='';
   VIEWS.forEach(function(v){
     var act=D.view===v[0];
     html+='<button class="ntab'+(act?' on':'')+'" onclick="G.view(\''+v[0]+'\')">'+v[1];
     if(v[0]==='eingabe'&&offen>0)html+='<span class="nbadge">'+offen+'</span>';
     html+='</button>';
   });
-  html+='</div>';
-  document.getElementById('nav-bar').outerHTML=html;
+  var el=document.getElementById('nav-bar');
+  if(el)el.innerHTML=html;
 }
 
 function renderContent(){
