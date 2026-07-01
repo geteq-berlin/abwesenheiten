@@ -145,7 +145,7 @@ var CFG = {
   tenantId:    'ac04c9b0-c539-4946-9abd-5366742dfd87',
   redirectUri: 'https://geteq-berlin.github.io/abwesenheiten/GETEQ_Dashboard_2026.html',
   site:        'geteq.sharepoint.com:/sites/GETEQAbwesenheiten:',
-  dataPath:    'Freigegebene Dokumente/Abwesenheiten/GETEQ_Daten.json',
+  dataPath:    'Abwesenheiten/GETEQ_Daten.json',
   scopes:      ['Files.ReadWrite.All','Sites.ReadWrite.All','User.Read']
 };
 
@@ -223,7 +223,7 @@ var GRAPH = 'https://graph.microsoft.com/v1.0';
 async function cloudLoad() {
   var token = await getToken();
   if (!token) return null;
-  var url = GRAPH+'/sites/'+CFG.site+'/drive/root:/'+CFG.dataPath+':/content';
+  var url = GRAPH+'/sites/'+CFG.site+'/drive/root:/'+encodeURIComponent(CFG.dataPath).replace(/%2F/g,'/')+':/content';
   try {
     var res = await fetch(url, { headers: { Authorization: 'Bearer '+token } });
     if (res.status === 404) return null;  // Datei existiert noch nicht
@@ -238,7 +238,7 @@ async function cloudLoad() {
 async function cloudSave(data) {
   var token = await getToken();
   if (!token) { setSyncStatus('err','⚠ Kein Token'); return false; }
-  var url = GRAPH+'/sites/'+CFG.site+'/drive/root:/'+CFG.dataPath+':/content';
+  var url = GRAPH+'/sites/'+CFG.site+'/drive/root:/'+encodeURIComponent(CFG.dataPath).replace(/%2F/g,'/')+':/content';
   try {
     setSyncStatus('spin','Speichern …');
     var res = await fetch(url, {
