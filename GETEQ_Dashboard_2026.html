@@ -683,15 +683,14 @@ function hrLock(){D.isHR=false;sessionStorage.removeItem('geteq-hr');flash('HR-M
 async function forceSyncNow(){
   setSyncStatus('spin','Synchronisiere …');
   var cloud=await cloudLoad();
-  var local=D;
-  var merged=mergeData({entries:D.entries,nid:D.nid},cloud);
-  D.entries=merged.entries;D.nid=merged.nid;
-  await cloudSave({entries:D.entries,nid:D.nid,ts:new Date().toISOString()});
+  var merged=mergeData({entries:D.entries,nid:D.nid,namen:D.namen},cloud);
+  D.entries=merged.entries;D.nid=merged.nid;D.namen=merged.namen||D.namen||{};
+  await cloudSave({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()});
   render();flash('Sync abgeschlossen ✓');
 }
 
-function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
-function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
+function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
+function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;if(p.namen)D.namen=p.namen;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
 function exportCSV(){var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbeitstage','Genehmigt','Kommentar']];D.entries.forEach(function(e){var ma=getMa(e.ma);rows.push([e.id,e.ma,ma.f,e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);});var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.csv';a.click();URL.revokeObjectURL(url);flash('CSV-Export ✓');}
 
 // ═══════════════════════════════════════════════════════
