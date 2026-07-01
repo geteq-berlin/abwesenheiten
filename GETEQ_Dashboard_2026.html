@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A2E5A">
+<title>GETEQ – Abwesenheitsmanagement 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1A2E5A;--blue:#0C447C;--accent:#E5820A;--ok:#085041;--warn:#633806;--err:#791F1F;
+  --ok-bg:#EAF3DE;--warn-bg:#FAEEDA;--err-bg:#FCEBEB;--info-bg:#E6F1FB;
+  --bg:#ececea;--srf:#fff;--bdr:#d8d8d5;--tx:#1a1a1a;--tx2:#888;--tx3:#555;
+  --font:Calibri,'Segoe UI',Arial,sans-serif}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh;-webkit-tap-highlight-color:transparent}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:9999;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-direction:column}
+#login-box{background:#fff;border-radius:14px;padding:36px 32px;width:300px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.45)}
+#lpw{width:100%;padding:10px 12px;font-size:15px;border:1.5px solid var(--bdr);border-radius:8px;margin:0 0 10px;font-family:inherit;text-align:center;letter-spacing:.15em}
+#lpw:focus{outline:2px solid var(--navy);border-color:var(--navy)}
+#lbtn{width:100%;padding:10px;font-size:14px;font-weight:600;border:none;border-radius:8px;background:var(--navy);color:#fff;cursor:pointer}
+#lbtn:hover{background:#0e1f3d}
+#lerr{color:#E24B4A;font-size:12px;margin-top:8px;min-height:18px}
+
+/* APP */
+#app{max-width:1080px;margin:0 auto;padding:14px;padding-bottom:80px}
+.hdr{background:var(--navy);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}
+.hdr-l{color:#fff;font-weight:500;font-size:14px}
+.hdr-l em{opacity:.55;font-size:11px;margin-left:8px;font-style:normal}
+.hdr-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hbtn{font-size:11px;padding:4px 10px;border-radius:5px;background:rgba(255,255,255,.12);color:#B5D4F4;border:1px solid rgba(255,255,255,.2);cursor:pointer;font-family:inherit}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+.hr-badge{font-size:10px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:10px;font-weight:500}
+.save-row{font-size:11px;padding:4px 10px;border-radius:5px;background:rgba(255,255,255,.1);color:#B5D4F4;white-space:nowrap}
+.save-row.ok{background:rgba(8,80,65,.5);color:#9FE1CB}
+.save-row.err{background:rgba(121,31,31,.5);color:#F8A3A3}
+
+/* NAV */
+.nav-bar{background:var(--bg);border:1px solid var(--bdr);border-top:none;display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-bar::-webkit-scrollbar{display:none}
+.ntab{padding:9px 14px;border:none;border-bottom:2.5px solid transparent;border-radius:0;background:transparent;font-size:12px;font-weight:400;color:var(--tx2);cursor:pointer;white-space:nowrap;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.ntab.on{border-bottom-color:var(--navy);font-weight:500;color:var(--navy)}
+.ntab:hover{background:#f0f0ee}
+.nbadge{background:#E24B4A;color:#fff;border-radius:9px;padding:1px 5px;font-size:9px;margin-left:3px}
+
+/* CONTENT */
+#content{background:#fff;border:1px solid var(--bdr);border-top:none;border-radius:0 0 8px 8px;padding:14px}
+
+/* TOAST */
+.toast{padding:7px 14px;font-size:12px;border-radius:5px;margin-bottom:12px;display:none}
+.toast.show{display:block}
+.toast.ok{background:var(--ok-bg);border:1px solid #9FE1CB;color:var(--ok)}
+.toast.warn{background:var(--warn-bg);border:1px solid #EF9F27;color:var(--warn)}
+.toast.err{background:var(--err-bg);border:1px solid #F09595;color:var(--err)}
+
+/* CARDS / FORMS */
+.card{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:12px 14px}
+.row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+.row>div{flex:1;min-width:120px}
+.lbl{font-size:11px;color:var(--tx2);display:block;margin-bottom:3px}
+select,input[type=text],input[type=date],input[type=number],input[type=password]{
+  width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;
+  font-size:13px;font-family:inherit;background:#fff;color:var(--tx)}
+select:focus,input:focus{outline:2px solid var(--navy);outline-offset:1px;border-color:var(--navy)}
+textarea{width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:12px;font-family:inherit;resize:vertical}
+button{font-family:inherit;cursor:pointer;font-size:13px}
+.btn{padding:7px 14px;border-radius:6px;border:1px solid var(--bdr);background:#fff;color:var(--tx)}
+.btn:hover:not(:disabled){background:#f0f0ee}
+.btn-p{background:var(--navy);color:#fff;border:none}.btn-p:hover{background:#0e1f3d}
+.btn-ok{background:var(--ok);color:#fff;border:none}.btn-ok:hover{opacity:.9}
+.btn-err{background:#A32D2D;color:#fff;border:none}.btn-err:hover{opacity:.9}
+.btn-sm{padding:4px 10px;font-size:11px}
+button:disabled{opacity:.4;cursor:default}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;color:var(--tx2);font-weight:500;padding:5px 8px;text-align:left;border-bottom:1px solid var(--bdr)}
+td{padding:6px 8px;border-bottom:1px solid #f0f0ee;font-size:12px;vertical-align:middle}
+tr:nth-child(even)>td{background:#fafaf8}
+tr:hover>td{background:#f5f3ee}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;white-space:nowrap}
+
+/* STAT CARDS */
+.stat{background:var(--bg);border-radius:8px;padding:10px 12px;flex:1;min-width:110px}
+
+/* PROGRESS BAR */
+.pbar-bg{flex:1;height:8px;background:var(--bdr);border-radius:4px;overflow:hidden;min-width:70px}
+.pbar{height:8px;border-radius:4px}
+
+/* WEEK GRID */
+.wk-outer{border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.wk-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+.wk-nav button{font-size:11px;padding:4px 10px;background:var(--bg);border-color:var(--bdr);color:var(--tx3);border-radius:5px;border:1px solid var(--bdr)}
+.wk-head{text-align:center;font-size:10px;font-weight:600;color:var(--tx2);padding:4px 2px}
+.wk-head.today{color:var(--blue);background:var(--info-bg);border-radius:5px}
+.wk-name{font-size:11px;padding:5px 6px;display:flex;align-items:center;color:var(--tx3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-cell{border-radius:5px;padding:4px 2px;text-align:center;font-size:9px;font-weight:600;cursor:default}
+.wk-url{background:var(--info-bg);color:var(--blue)}
+.wk-ab{background:var(--warn-bg);color:var(--warn)}
+.wk-fort{background:#FAECE7;color:#712B13}
+.wk-son{background:#EEEDFE;color:#3C3489}
+.wk-bild{background:var(--ok-bg);color:var(--ok)}
+.wk-krank{background:var(--err-bg);color:var(--err)}
+.wk-frei{background:#FBEAF0;color:#72243E}
+.wk-empty{background:var(--bg)}
+.wk-empty.today{background:#EEF6FF}
+.wk-holiday{background:#f0f0ee;color:#aaa}
+.wk-legend{margin-top:10px;padding-top:8px;border-top:1px solid #f0f0ee;font-size:10px;color:#bbb;display:flex;gap:8px;flex-wrap:wrap}
+.wk-pill{padding:1px 6px;border-radius:3px;font-weight:600}
+
+/* JAHRES-KALENDER */
+.jk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:700px){.jk-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:450px){.jk-grid{grid-template-columns:1fr}}
+.jk-month{border:1px solid var(--bdr);border-radius:8px;padding:8px 6px;background:#fff}
+.jk-mtitle{font-size:12px;font-weight:600;color:var(--navy);text-align:center;margin-bottom:5px}
+.jk-drow{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:1px}
+.jk-dn{text-align:center;font-size:8px;font-weight:600;color:#aaa;padding:1px 0}
+.jk-dn.we{color:#C94040}
+.jk-day{text-align:center;font-size:10px;padding:3px 0;border-radius:3px;background:transparent;color:#333;border:1px solid transparent;cursor:default}
+.jk-day.out{background:transparent;color:transparent}
+.jk-day.we{color:#C94040}
+.jk-day.ft{background:#FEF3C7;color:#92400E;border-color:#FCD34D}
+.jk-day.url{background:#1A2E5A;color:#fff;font-weight:600}
+.jk-day.urlp{background:#7A9CD4;color:#fff}
+.jk-day.krank{background:#FCEBEB;color:#791F1F;font-weight:600}
+.jk-day.bild{background:#D1FAE5;color:#065F46;font-weight:600}
+.jk-day.fort{background:#FAECE7;color:#712B13;font-weight:600}
+.jk-day.son{background:#EEEDFE;color:#3C3489;font-weight:600}
+.jk-day.ab{background:#FAEEDA;color:#633806;font-weight:600}
+.jk-day.today{outline:1.5px solid var(--navy);outline-offset:-1px}
+.jk-ft{font-size:9px;color:#92400E;margin-top:4px;border-top:1px solid #f0f0ee;padding-top:3px;line-height:1.4}
+.jk-key{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:middle;margin-right:2px}
+.jk-key.url{background:#1A2E5A}
+.jk-key.urlp{background:#7A9CD4}
+.jk-key.krank{background:#FCEBEB;border:1px solid #F0A4A4}
+.jk-key.bild{background:#D1FAE5;border:1px solid #86E3B5}
+.jk-key.fort{background:#FAECE7;border:1px solid #E8B7A6}
+.jk-key.son{background:#EEEDFE;border:1px solid #C7C1F5}
+.jk-key.ft{background:#FEF3C7;border:1px solid #FCD34D}
+.jk-key.we{background:#fff;border:1px solid #d8d8d5;color:#C94040}
+
+/* INFOBOX */
+.infobox{background:var(--warn-bg);border:1px solid #EF9F27;border-radius:6px;padding:8px 10px;font-size:11px;color:var(--warn);line-height:1.5;margin-bottom:9px}
+
+/* HR LOCKED */
+.hr-locked{text-align:center;background:#fafaf8;border:2px dashed var(--bdr);border-radius:10px;padding:30px 20px}
+
+/* MOBILE */
+@media(max-width:600px){
+  #app{padding:10px;padding-bottom:70px}
+  .row{flex-direction:column}
+  .row>div{min-width:0}
+  .hdr-r .hbtn:not(.save-row){display:none}
+  .wk-name{font-size:9px}
+}
+.fab{position:fixed;bottom:18px;right:18px;width:50px;height:50px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:22px;box-shadow:0 4px 16px rgba(229,130,10,.4);z-index:80;display:none;align-items:center;justify-content:center;cursor:pointer}
+@media(max-width:600px){.fab{display:flex}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div style="color:#B5D4F4;font-size:11px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;opacity:.7">Abwesenheitsmanagement</div>
+  <div id="login-box">
+    <div style="font-size:28px;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:4px">GETEQ</div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:24px">Bitte PIN eingeben</div>
+    <input id="lpw" type="password" placeholder="••••" maxlength="6" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="lbtn" onclick="doLogin()">Anmelden</button>
+    <div id="lerr"></div>
+  </div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026</div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <div id="hdr-wrap"></div>
+  <div id="toast" class="toast"></div>
+  <div class="nav-bar" id="nav-bar"></div>
+  <div id="content"></div>
+</div>
+
+<button class="fab" onclick="G.view('eingabe')" title="Neue Meldung">+</button>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  KONFIGURATION
+// ═══════════════════════════════════════════════════════
+var PIN_APP = '1000';
+var PIN_HR  = '2000';
+var SK      = 'geteq-ab-2026-v3';  // v3 = mit historischem SEED (244 Einträge)
+var NAVY    = '#1A2E5A';
+
+// Feiertage Berlin 2026
+var FEIERTAGE = {
+  '2026-01-01':'Neujahr',
+  '2026-03-08':'Internationaler Frauentag',
+  '2026-04-03':'Karfreitag',
+  '2026-04-06':'Ostermontag',
+  '2026-05-01':'Tag der Arbeit',
+  '2026-05-14':'Christi Himmelfahrt',
+  '2026-05-25':'Pfingstmontag',
+  '2026-10-03':'Tag der Deutschen Einheit',
+  '2026-12-25':'1. Weihnachtstag',
+  '2026-12-26':'2. Weihnachtstag'
+};
+
+// Abwesenheitsarten
+var ART_ALL  = ['Urlaub','Krank','Bildungsurlaub','Sonderurlaub','Fortbildung','Abwesenheit','Freistellung','Elternzeit','Sonstiges'];
+var ART_GEN  = ['Urlaub','Bildungsurlaub','Sonderurlaub']; // brauchen Genehmigung
+
+// Stammdaten – aus anonymisierter Excel (MA_IDs)
+var STAMM = [
+  {id:'MA-016',n:'Daniel Bawey',           f:'Geschäftsführung',         grp:'fest',wh:40,ju:30,b:30,ue:0,c:'GF-01',on:true},
+  {id:'MA-020',n:'Timna Wegerer',          f:'Stellv. Geschäftsführung', grp:'fest',wh:35,ju:36,b:30,ue:6,c:'GF-02',on:true},
+  {id:'MA-022',n:'Doreen Verworner',       f:'Verwaltung',               grp:'fest',wh:30,ju:32,b:30,ue:2,c:'VW-01',on:true},
+  {id:'MA-IT1',n:'Christian Ross',         f:'IT-Support',               grp:'fest',wh:30,ju:35,b:35,ue:0,c:'IT-01',on:true},
+  {id:'MA-003',n:'Claudia Heike',          f:'Koordinatorin',            grp:'fest',wh:35,ju:30,b:30,ue:0,c:'KO-01',on:true},
+  {id:'MA-019',n:'Alexander Puchtler',     f:'Koordinator',              grp:'fest',wh:20,ju:30,b:30,ue:0,c:'KO-02',on:true},
+  {id:'MA-026',n:'Anna Lovis Reimann',     f:'Schulungskoordinatorin',   grp:'fest',wh:35,ju:30,b:30,ue:0,c:'KO-03',on:true},
+  {id:'MA-035',n:'Johannah Streppelhoff',  f:'Koordinatorin',            grp:'fest',wh:30,ju:15,b:15,ue:0,c:'KO-04',on:true},
+  {id:'MA-034',n:'Sarah Breuer',           f:'Koordinatorin',            grp:'fest',wh:30,ju:30,b:30,ue:0,c:'KO-05',on:true},
+  {id:'MA-002',n:'Paraskevas Evthimiou',   f:'Evaluator',                grp:'fest',wh:25,ju:35,b:35,ue:0,c:'EV-01',on:true},
+  {id:'MA-004',n:'Marian Holland',         f:'Evaluator',                grp:'fest',wh:30,ju:35,b:35,ue:0,c:'EV-02',on:true},
+  {id:'MA-032',n:'Christian Kluge',        f:'Evaluator',                grp:'fest',wh:20,ju:35,b:35,ue:0,c:'EV-03',on:true},
+  {id:'MA-025',n:'Valbona Krasniqi',       f:'Evaluatorin',              grp:'fest',wh:20,ju:35,b:35,ue:0,c:'EV-04',on:true},
+  {id:'MA-007',n:'Patrick Marx',           f:'Evaluator',                grp:'fest',wh:20,ju:35,b:35,ue:0,c:'EV-05',on:true},
+  {id:'MA-011',n:'Enrico Schaffrath',      f:'Evaluator',                grp:'fest',wh:30,ju:35,b:35,ue:0,c:'EV-06',on:true},
+  {id:'MA-033',n:'Marcell Hesse',          f:'Evaluator',                grp:'fest',wh:20,ju:35,b:35,ue:0,c:'EV-07',on:true},
+  {id:'MA-029',n:'Isabell Frost',          f:'Hilfskraft',               grp:'fest',wh:18,ju:18,b:18,ue:0,c:'HK-01',on:true},
+  {id:'MA-A111',n:'Mohamad Amraya',        f:'Evaluator (extern)',       grp:'sonst',wh:0, ju:35,b:35,ue:0,c:'AE-01',on:true},
+  {id:'MA-A112',n:'Cheikh Anta Belle-Kum', f:'Evaluator (extern)',       grp:'sonst',wh:25,ju:35,b:35,ue:0,c:'AE-02',on:true},
+  {id:'MA-A104',n:'Lucie Chen',            f:'Evaluatorin (extern)',     grp:'sonst',wh:20,ju:24,b:24,ue:0,c:'AE-03',on:true},
+  {id:'MA-A106',n:'Katharina Hand',        f:'Evaluatorin (extern)',     grp:'sonst',wh:20,ju:30,b:30,ue:0,c:'AE-04',on:true},
+  {id:'MA-A114',n:'Nicole Jäkel',          f:'Evaluatorin (extern)',     grp:'sonst',wh:12,ju:24,b:24,ue:0,c:'AE-05',on:true},
+  {id:'MA-A102',n:'Max Kempe',             f:'Evaluator (extern)',       grp:'sonst',wh:20,ju:30,b:30,ue:0,c:'AE-06',on:true},
+  {id:'MA-A101',n:'Sven Papenbrock',       f:'Evaluator (extern)',       grp:'sonst',wh:20,ju:16,b:16,ue:0,c:'AE-07',on:true},
+  // Ausgetretene MA – deaktiviert (on:false), Historie bleibt zuordenbar
+  {id:'MA-030', n:'Andrea Becher',         f:'Koordination',              grp:'fest', wh:0, ju:10,b:10,ue:0,c:'EH-01',on:false},
+  {id:'MA-031', n:'Anja Maja Hempel',      f:'Koordinatorin',             grp:'fest', wh:30,ju:30,b:30,ue:0,c:'EH-02',on:false},
+  {id:'MA-A113',n:'Nico Klinkmüller',      f:'Evaluator (extern)',        grp:'sonst',wh:30,ju:30,b:30,ue:0,c:'EH-03',on:false},
+  {id:'MA-A115',n:'David Schulz',          f:'Evaluator (extern)',        grp:'sonst',wh:0, ju:35,b:35,ue:0,c:'EH-04',on:false},
+];
+
+// Historische Einträge aus dem Vorgänger-Dashboard (anonymisiert MA_ID) –
+// wird nur beim allerersten Start geladen, falls noch nichts in localStorage liegt.
+var SEED=[
+  {id:'E-0001',ma:'MA-019',art:'Urlaub',von:'2026-01-02',bis:'2026-01-06',tage:3,gen:'Ja',kom:''},
+  {id:'E-0002',ma:'MA-019',art:'Urlaub',von:'2026-04-08',bis:'2026-04-10',tage:3,gen:'Ja',kom:''},
+  {id:'E-0003',ma:'MA-019',art:'Urlaub',von:'2026-05-13',bis:'2026-05-18',tage:4,gen:'Ja',kom:''},
+  {id:'E-0004',ma:'MA-019',art:'Urlaub',von:'2026-06-11',bis:'2026-06-11',tage:1,gen:'Ja',kom:''},
+  {id:'E-0005',ma:'MA-019',art:'Urlaub',von:'2026-07-27',bis:'2026-08-14',tage:15,gen:'Ja',kom:''},
+  {id:'E-0006',ma:'MA-019',art:'Urlaub',von:'2026-11-13',bis:'2026-11-13',tage:1,gen:'Ja',kom:''},
+  {id:'E-0007',ma:'MA-019',art:'Urlaub',von:'2026-12-23',bis:'2026-12-23',tage:1,gen:'Ja',kom:''},
+  {id:'E-0008',ma:'MA-019',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0009',ma:'MA-030',art:'Urlaub',von:'2026-01-02',bis:'2026-01-09',tage:6,gen:'Ja',kom:''},
+  {id:'E-0010',ma:'MA-030',art:'Urlaub',von:'2026-02-10',bis:'2026-02-10',tage:1,gen:'Ja',kom:''},
+  {id:'E-0011',ma:'MA-030',art:'Urlaub',von:'2026-04-02',bis:'2026-04-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0012',ma:'MA-030',art:'Urlaub',von:'2026-04-09',bis:'2026-04-10',tage:2,gen:'Ja',kom:''},
+  {id:'E-0013',ma:'MA-030',art:'Urlaub',von:'2026-05-15',bis:'2026-05-15',tage:1,gen:'Ja',kom:''},
+  {id:'E-0014',ma:'MA-030',art:'Urlaub',von:'2026-08-20',bis:'2026-08-28',tage:7,gen:'Ja',kom:''},
+  {id:'E-0015',ma:'MA-031',art:'Urlaub',von:'2026-01-23',bis:'2026-01-26',tage:2,gen:'Ja',kom:''},
+  {id:'E-0016',ma:'MA-031',art:'Urlaub',von:'2026-02-02',bis:'2026-02-03',tage:2,gen:'Ja',kom:''},
+  {id:'E-0017',ma:'MA-031',art:'Urlaub',von:'2026-03-23',bis:'2026-04-02',tage:9,gen:'Ja',kom:''},
+  {id:'E-0018',ma:'MA-031',art:'Urlaub',von:'2026-04-07',bis:'2026-04-10',tage:4,gen:'Ja',kom:''},
+  {id:'E-0019',ma:'MA-031',art:'Urlaub',von:'2026-04-23',bis:'2026-04-24',tage:2,gen:'Ja',kom:''},
+  {id:'E-0020',ma:'MA-031',art:'Urlaub',von:'2026-08-03',bis:'2026-08-19',tage:13,gen:'Ja',kom:''},
+  {id:'E-0021',ma:'MA-026',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0022',ma:'MA-026',art:'Urlaub',von:'2026-04-07',bis:'2026-04-10',tage:4,gen:'Ja',kom:''},
+  {id:'E-0023',ma:'MA-026',art:'Urlaub',von:'2026-05-11',bis:'2026-05-15',tage:5,gen:'Ja',kom:''},
+  {id:'E-0024',ma:'MA-026',art:'Urlaub',von:'2026-06-15',bis:'2026-06-19',tage:5,gen:'Ja',kom:''},
+  {id:'E-0025',ma:'MA-026',art:'Urlaub',von:'2026-08-04',bis:'2026-08-15',tage:9,gen:'Ja',kom:''},
+  {id:'E-0026',ma:'MA-026',art:'Urlaub',von:'2026-09-11',bis:'2026-09-11',tage:1,gen:'Ja',kom:''},
+  {id:'E-0027',ma:'MA-026',art:'Urlaub',von:'2026-09-25',bis:'2026-09-25',tage:1,gen:'Ja',kom:''},
+  {id:'E-0028',ma:'MA-026',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0029',ma:'MA-032',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0030',ma:'MA-032',art:'Urlaub',von:'2026-02-12',bis:'2026-02-12',tage:1,gen:'Ja',kom:''},
+  {id:'E-0031',ma:'MA-032',art:'Urlaub',von:'2026-03-30',bis:'2026-04-02',tage:4,gen:'Ja',kom:''},
+  {id:'E-0032',ma:'MA-032',art:'Urlaub',von:'2026-07-06',bis:'2026-07-31',tage:20,gen:'Ja',kom:''},
+  {id:'E-0033',ma:'MA-032',art:'Urlaub',von:'2026-12-22',bis:'2026-12-23',tage:2,gen:'Ja',kom:''},
+  {id:'E-0034',ma:'MA-032',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0035',ma:'MA-003',art:'Urlaub',von:'2026-05-04',bis:'2026-05-12',tage:7,gen:'Ja',kom:''},
+  {id:'E-0036',ma:'MA-003',art:'Urlaub',von:'2026-08-19',bis:'2026-08-31',tage:9,gen:'Ja',kom:''},
+  {id:'E-0037',ma:'MA-003',art:'Urlaub',von:'2026-12-14',bis:'2026-12-23',tage:8,gen:'Ja',kom:''},
+  {id:'E-0038',ma:'MA-003',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0039',ma:'MA-016',art:'Urlaub',von:'2026-04-01',bis:'2026-04-02',tage:2,gen:'Ja',kom:''},
+  {id:'E-0040',ma:'MA-016',art:'Urlaub',von:'2026-04-30',bis:'2026-04-30',tage:1,gen:'Ja',kom:''},
+  {id:'E-0041',ma:'MA-016',art:'Urlaub',von:'2026-05-04',bis:'2026-05-04',tage:1,gen:'Ja',kom:''},
+  {id:'E-0042',ma:'MA-016',art:'Urlaub',von:'2026-08-10',bis:'2026-08-21',tage:10,gen:'Ja',kom:''},
+  {id:'E-0043',ma:'MA-016',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0044',ma:'MA-016',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0045',ma:'MA-022',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0046',ma:'MA-022',art:'Urlaub',von:'2026-01-16',bis:'2026-01-16',tage:1,gen:'Ja',kom:''},
+  {id:'E-0047',ma:'MA-022',art:'Urlaub',von:'2026-04-30',bis:'2026-04-30',tage:1,gen:'Ja',kom:''},
+  {id:'E-0048',ma:'MA-022',art:'Urlaub',von:'2026-05-07',bis:'2026-05-15',tage:7,gen:'Ja',kom:''},
+  {id:'E-0049',ma:'MA-022',art:'Urlaub',von:'2026-08-17',bis:'2026-08-28',tage:10,gen:'Ja',kom:''},
+  {id:'E-0050',ma:'MA-022',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0051',ma:'MA-022',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0052',ma:'MA-011',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0053',ma:'MA-011',art:'Urlaub',von:'2026-03-30',bis:'2026-04-02',tage:4,gen:'Ja',kom:''},
+  {id:'E-0054',ma:'MA-011',art:'Urlaub',von:'2026-04-07',bis:'2026-04-10',tage:4,gen:'Ja',kom:''},
+  {id:'E-0055',ma:'MA-011',art:'Urlaub',von:'2026-05-11',bis:'2026-05-15',tage:5,gen:'Ja',kom:''},
+  {id:'E-0056',ma:'MA-011',art:'Urlaub',von:'2026-08-03',bis:'2026-08-21',tage:15,gen:'Ja',kom:''},
+  {id:'E-0057',ma:'MA-011',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0058',ma:'MA-011',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0059',ma:'MA-029',art:'Urlaub',von:'2026-04-07',bis:'2026-04-08',tage:2,gen:'Ja',kom:''},
+  {id:'E-0060',ma:'MA-029',art:'Urlaub',von:'2026-05-26',bis:'2026-05-27',tage:2,gen:'Ja',kom:''},
+  {id:'E-0061',ma:'MA-029',art:'Urlaub',von:'2026-07-27',bis:'2026-07-29',tage:3,gen:'Ja',kom:''},
+  {id:'E-0062',ma:'MA-029',art:'Urlaub',von:'2026-08-03',bis:'2026-08-05',tage:3,gen:'Ja',kom:''},
+  {id:'E-0063',ma:'MA-029',art:'Urlaub',von:'2026-11-16',bis:'2026-11-17',tage:2,gen:'Ja',kom:''},
+  {id:'E-0064',ma:'MA-029',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0065',ma:'MA-029',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0066',ma:'MA-033',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0067',ma:'MA-033',art:'Urlaub',von:'2026-02-02',bis:'2026-02-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0068',ma:'MA-033',art:'Urlaub',von:'2026-02-25',bis:'2026-02-25',tage:1,gen:'Ja',kom:''},
+  {id:'E-0069',ma:'MA-033',art:'Urlaub',von:'2026-03-02',bis:'2026-03-03',tage:2,gen:'Ja',kom:''},
+  {id:'E-0070',ma:'MA-033',art:'Urlaub',von:'2026-03-30',bis:'2026-04-02',tage:4,gen:'Ja',kom:''},
+  {id:'E-0071',ma:'MA-033',art:'Urlaub',von:'2026-05-13',bis:'2026-05-15',tage:3,gen:'Ja',kom:''},
+  {id:'E-0072',ma:'MA-033',art:'Urlaub',von:'2026-06-15',bis:'2026-07-03',tage:15,gen:'Ja',kom:''},
+  {id:'E-0073',ma:'MA-033',art:'Urlaub',von:'2026-11-23',bis:'2026-11-27',tage:5,gen:'Ja',kom:''},
+  {id:'E-0074',ma:'MA-033',art:'Urlaub',von:'2026-12-23',bis:'2026-12-23',tage:1,gen:'Ja',kom:''},
+  {id:'E-0075',ma:'MA-033',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0076',ma:'MA-004',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0077',ma:'MA-004',art:'Urlaub',von:'2026-04-02',bis:'2026-04-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0078',ma:'MA-004',art:'Urlaub',von:'2026-04-07',bis:'2026-04-07',tage:1,gen:'Ja',kom:''},
+  {id:'E-0079',ma:'MA-004',art:'Urlaub',von:'2026-05-15',bis:'2026-05-15',tage:1,gen:'Ja',kom:''},
+  {id:'E-0080',ma:'MA-004',art:'Urlaub',von:'2026-06-29',bis:'2026-07-10',tage:10,gen:'Ja',kom:''},
+  {id:'E-0081',ma:'MA-004',art:'Urlaub',von:'2026-09-04',bis:'2026-09-18',tage:11,gen:'Ja',kom:''},
+  {id:'E-0082',ma:'MA-004',art:'Urlaub',von:'2026-12-15',bis:'2026-12-23',tage:7,gen:'Ja',kom:''},
+  {id:'E-0083',ma:'MA-004',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0084',ma:'MA-002',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0085',ma:'MA-002',art:'Urlaub',von:'2026-03-23',bis:'2026-03-23',tage:1,gen:'Ja',kom:''},
+  {id:'E-0086',ma:'MA-002',art:'Urlaub',von:'2026-04-07',bis:'2026-04-10',tage:4,gen:'Ja',kom:''},
+  {id:'E-0087',ma:'MA-002',art:'Urlaub',von:'2026-04-17',bis:'2026-04-17',tage:1,gen:'Ja',kom:''},
+  {id:'E-0088',ma:'MA-002',art:'Urlaub',von:'2026-05-15',bis:'2026-05-15',tage:1,gen:'Ja',kom:''},
+  {id:'E-0089',ma:'MA-002',art:'Urlaub',von:'2026-05-29',bis:'2026-06-05',tage:6,gen:'Ja',kom:''},
+  {id:'E-0090',ma:'MA-002',art:'Urlaub',von:'2026-08-03',bis:'2026-08-14',tage:10,gen:'Ja',kom:''},
+  {id:'E-0091',ma:'MA-002',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0092',ma:'MA-002',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0093',ma:'MA-007',art:'Urlaub',von:'2026-05-04',bis:'2026-05-15',tage:10,gen:'Ja',kom:''},
+  {id:'E-0094',ma:'MA-007',art:'Urlaub',von:'2026-06-22',bis:'2026-06-26',tage:5,gen:'Ja',kom:''},
+  {id:'E-0095',ma:'MA-007',art:'Urlaub',von:'2026-08-17',bis:'2026-08-28',tage:10,gen:'Ja',kom:''},
+  {id:'E-0096',ma:'MA-007',art:'Urlaub',von:'2026-12-14',bis:'2026-12-23',tage:8,gen:'Ja',kom:''},
+  {id:'E-0097',ma:'MA-007',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0098',ma:'MA-034',art:'Urlaub',von:'2026-08-07',bis:'2026-08-12',tage:4,gen:'Ja',kom:''},
+  {id:'E-0099',ma:'MA-034',art:'Urlaub',von:'2026-08-28',bis:'2026-08-31',tage:2,gen:'Ja',kom:''},
+  {id:'E-0100',ma:'MA-034',art:'Urlaub',von:'2026-09-21',bis:'2026-09-25',tage:5,gen:'Ja',kom:''},
+  {id:'E-0101',ma:'MA-034',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0102',ma:'MA-020',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0103',ma:'MA-020',art:'Urlaub',von:'2026-02-05',bis:'2026-02-06',tage:2,gen:'Ja',kom:''},
+  {id:'E-0104',ma:'MA-020',art:'Urlaub',von:'2026-03-30',bis:'2026-04-02',tage:4,gen:'Ja',kom:''},
+  {id:'E-0105',ma:'MA-020',art:'Urlaub',von:'2026-04-07',bis:'2026-04-07',tage:1,gen:'Ja',kom:''},
+  {id:'E-0106',ma:'MA-020',art:'Urlaub',von:'2026-04-14',bis:'2026-04-14',tage:1,gen:'Ja',kom:''},
+  {id:'E-0107',ma:'MA-020',art:'Urlaub',von:'2026-07-30',bis:'2026-08-14',tage:12,gen:'Ja',kom:''},
+  {id:'E-0108',ma:'MA-020',art:'Urlaub',von:'2026-10-26',bis:'2026-10-30',tage:5,gen:'Ja',kom:''},
+  {id:'E-0109',ma:'MA-020',art:'Urlaub',von:'2026-12-17',bis:'2026-12-23',tage:5,gen:'Ja',kom:''},
+  {id:'E-0110',ma:'MA-020',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0111',ma:'MA-025',art:'Urlaub',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'Ja',kom:''},
+  {id:'E-0112',ma:'MA-025',art:'Urlaub',von:'2026-02-12',bis:'2026-02-12',tage:1,gen:'Ja',kom:''},
+  {id:'E-0113',ma:'MA-025',art:'Urlaub',von:'2026-05-11',bis:'2026-05-15',tage:5,gen:'Ja',kom:''},
+  {id:'E-0114',ma:'MA-025',art:'Urlaub',von:'2026-09-14',bis:'2026-10-09',tage:20,gen:'Ja',kom:''},
+  {id:'E-0115',ma:'MA-025',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0116',ma:'MA-025',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0117',ma:'MA-IT1',art:'Urlaub',von:'2026-05-15',bis:'2026-05-15',tage:1,gen:'Ja',kom:''},
+  {id:'E-0118',ma:'MA-IT1',art:'Urlaub',von:'2026-06-01',bis:'2026-06-09',tage:7,gen:'Ja',kom:''},
+  {id:'E-0119',ma:'MA-IT1',art:'Urlaub',von:'2026-10-05',bis:'2026-10-16',tage:10,gen:'Ja',kom:''},
+  {id:'E-0120',ma:'MA-IT1',art:'Urlaub',von:'2026-12-21',bis:'2026-12-23',tage:3,gen:'Ja',kom:''},
+  {id:'E-0121',ma:'MA-IT1',art:'Urlaub',von:'2026-12-28',bis:'2026-12-30',tage:3,gen:'Ja',kom:''},
+  {id:'E-0122',ma:'MA-019',art:'Krank',von:'2026-01-15',bis:'2026-01-15',tage:1,gen:'–',kom:''},
+  {id:'E-0123',ma:'MA-019',art:'Krank',von:'2026-03-12',bis:'2026-03-13',tage:2,gen:'–',kom:''},
+  {id:'E-0124',ma:'MA-019',art:'Krank',von:'2026-05-26',bis:'2026-05-27',tage:2,gen:'–',kom:''},
+  {id:'E-0125',ma:'MA-030',art:'Krank',von:'2026-01-14',bis:'2026-01-16',tage:3,gen:'–',kom:''},
+  {id:'E-0126',ma:'MA-030',art:'Krank',von:'2026-02-23',bis:'2026-02-23',tage:1,gen:'–',kom:''},
+  {id:'E-0127',ma:'MA-030',art:'Krank',von:'2026-03-02',bis:'2026-03-06',tage:5,gen:'–',kom:''},
+  {id:'E-0128',ma:'MA-030',art:'Krank',von:'2026-03-20',bis:'2026-03-20',tage:1,gen:'–',kom:''},
+  {id:'E-0129',ma:'MA-030',art:'Krank',von:'2026-04-13',bis:'2026-04-13',tage:1,gen:'–',kom:''},
+  {id:'E-0130',ma:'MA-031',art:'Krank',von:'2026-01-05',bis:'2026-01-09',tage:5,gen:'–',kom:''},
+  {id:'E-0131',ma:'MA-031',art:'Krank',von:'2026-01-14',bis:'2026-01-15',tage:2,gen:'–',kom:''},
+  {id:'E-0132',ma:'MA-031',art:'Krank',von:'2026-01-27',bis:'2026-01-28',tage:2,gen:'–',kom:''},
+  {id:'E-0133',ma:'MA-031',art:'Krank',von:'2026-02-04',bis:'2026-02-20',tage:13,gen:'–',kom:''},
+  {id:'E-0134',ma:'MA-026',art:'Krank',von:'2026-01-13',bis:'2026-01-13',tage:1,gen:'–',kom:''},
+  {id:'E-0135',ma:'MA-026',art:'Krank',von:'2026-01-19',bis:'2026-01-19',tage:1,gen:'–',kom:''},
+  {id:'E-0136',ma:'MA-026',art:'Krank',von:'2026-02-09',bis:'2026-02-13',tage:5,gen:'–',kom:''},
+  {id:'E-0137',ma:'MA-026',art:'Krank',von:'2026-03-05',bis:'2026-03-05',tage:1,gen:'–',kom:''},
+  {id:'E-0138',ma:'MA-026',art:'Krank',von:'2026-03-20',bis:'2026-04-02',tage:10,gen:'–',kom:''},
+  {id:'E-0139',ma:'MA-026',art:'Krank',von:'2026-06-05',bis:'2026-06-05',tage:1,gen:'–',kom:''},
+  {id:'E-0140',ma:'MA-026',art:'Krank',von:'2026-06-18',bis:'2026-06-19',tage:2,gen:'–',kom:''},
+  {id:'E-0141',ma:'MA-032',art:'Krank',von:'2026-01-16',bis:'2026-01-16',tage:1,gen:'–',kom:''},
+  {id:'E-0142',ma:'MA-032',art:'Krank',von:'2026-02-11',bis:'2026-02-18',tage:6,gen:'–',kom:''},
+  {id:'E-0143',ma:'MA-032',art:'Krank',von:'2026-02-26',bis:'2026-02-27',tage:2,gen:'–',kom:''},
+  {id:'E-0144',ma:'MA-032',art:'Krank',von:'2026-05-15',bis:'2026-05-15',tage:1,gen:'–',kom:''},
+  {id:'E-0145',ma:'MA-003',art:'Krank',von:'2026-01-26',bis:'2026-02-13',tage:15,gen:'–',kom:''},
+  {id:'E-0146',ma:'MA-003',art:'Krank',von:'2026-03-04',bis:'2026-03-04',tage:1,gen:'–',kom:''},
+  {id:'E-0147',ma:'MA-003',art:'Krank',von:'2026-05-02',bis:'2026-05-02',tage:0,gen:'–',kom:''},
+  {id:'E-0148',ma:'MA-003',art:'Krank',von:'2026-05-20',bis:'2026-05-21',tage:2,gen:'–',kom:''},
+  {id:'E-0149',ma:'MA-016',art:'Krank',von:'2026-02-25',bis:'2026-02-25',tage:1,gen:'–',kom:''},
+  {id:'E-0150',ma:'MA-A115',art:'Krank',von:'2026-01-06',bis:'2026-01-06',tage:1,gen:'–',kom:''},
+  {id:'E-0151',ma:'MA-022',art:'Krank',von:'2026-02-18',bis:'2026-02-20',tage:3,gen:'–',kom:''},
+  {id:'E-0152',ma:'MA-022',art:'Krank',von:'2026-02-27',bis:'2026-02-27',tage:1,gen:'–',kom:''},
+  {id:'E-0153',ma:'MA-022',art:'Krank',von:'2026-03-05',bis:'2026-03-05',tage:1,gen:'–',kom:''},
+  {id:'E-0154',ma:'MA-022',art:'Krank',von:'2026-03-09',bis:'2026-03-13',tage:5,gen:'–',kom:''},
+  {id:'E-0155',ma:'MA-022',art:'Krank',von:'2026-04-08',bis:'2026-04-30',tage:17,gen:'–',kom:''},
+  {id:'E-0156',ma:'MA-022',art:'Krank',von:'2026-05-04',bis:'2026-05-22',tage:15,gen:'–',kom:''},
+  {id:'E-0157',ma:'MA-022',art:'Krank',von:'2026-05-26',bis:'2026-07-09',tage:33,gen:'–',kom:''},
+  {id:'E-0158',ma:'MA-022',art:'Krank',von:'2026-08-26',bis:'2026-08-26',tage:1,gen:'–',kom:''},
+  {id:'E-0159',ma:'MA-022',art:'Krank',von:'2026-10-31',bis:'2026-10-31',tage:0,gen:'–',kom:''},
+  {id:'E-0160',ma:'MA-022',art:'Krank',von:'2026-11-05',bis:'2026-12-12',tage:27,gen:'–',kom:''},
+  {id:'E-0161',ma:'MA-022',art:'Krank',von:'2026-12-29',bis:'2026-12-31',tage:3,gen:'–',kom:''},
+  {id:'E-0162',ma:'MA-029',art:'Krank',von:'2026-01-05',bis:'2026-01-07',tage:3,gen:'–',kom:''},
+  {id:'E-0163',ma:'MA-029',art:'Krank',von:'2026-01-12',bis:'2026-01-14',tage:3,gen:'–',kom:''},
+  {id:'E-0164',ma:'MA-029',art:'Krank',von:'2026-02-01',bis:'2026-02-03',tage:2,gen:'–',kom:''},
+  {id:'E-0165',ma:'MA-029',art:'Krank',von:'2026-02-16',bis:'2026-02-18',tage:3,gen:'–',kom:''},
+  {id:'E-0166',ma:'MA-029',art:'Krank',von:'2026-02-23',bis:'2026-02-25',tage:3,gen:'–',kom:''},
+  {id:'E-0167',ma:'MA-029',art:'Krank',von:'2026-04-13',bis:'2026-04-14',tage:2,gen:'–',kom:''},
+  {id:'E-0168',ma:'MA-029',art:'Krank',von:'2026-04-27',bis:'2026-04-28',tage:2,gen:'–',kom:''},
+  {id:'E-0169',ma:'MA-029',art:'Krank',von:'2026-05-26',bis:'2026-05-27',tage:2,gen:'–',kom:''},
+  {id:'E-0170',ma:'MA-029',art:'Krank',von:'2026-06-02',bis:'2026-06-03',tage:2,gen:'–',kom:''},
+  {id:'E-0171',ma:'MA-A106',art:'Krank',von:'2026-01-06',bis:'2026-01-09',tage:4,gen:'–',kom:''},
+  {id:'E-0172',ma:'MA-A106',art:'Krank',von:'2026-01-15',bis:'2026-01-30',tage:12,gen:'–',kom:''},
+  {id:'E-0173',ma:'MA-A106',art:'Krank',von:'2026-03-02',bis:'2026-03-27',tage:20,gen:'–',kom:''},
+  {id:'E-0174',ma:'MA-A106',art:'Krank',von:'2026-03-31',bis:'2026-04-02',tage:3,gen:'–',kom:''},
+  {id:'E-0175',ma:'MA-A106',art:'Krank',von:'2026-05-06',bis:'2026-05-06',tage:1,gen:'–',kom:''},
+  {id:'E-0176',ma:'MA-A106',art:'Krank',von:'2026-05-20',bis:'2026-05-21',tage:2,gen:'–',kom:''},
+  {id:'E-0177',ma:'MA-A106',art:'Krank',von:'2026-05-27',bis:'2026-05-27',tage:1,gen:'–',kom:''},
+  {id:'E-0178',ma:'MA-A106',art:'Krank',von:'2026-06-03',bis:'2026-06-04',tage:2,gen:'–',kom:''},
+  {id:'E-0179',ma:'MA-A106',art:'Krank',von:'2026-06-17',bis:'2026-06-17',tage:1,gen:'–',kom:''},
+  {id:'E-0180',ma:'MA-A104',art:'Krank',von:'2026-01-09',bis:'2026-01-30',tage:16,gen:'–',kom:''},
+  {id:'E-0181',ma:'MA-A104',art:'Krank',von:'2026-02-06',bis:'2026-02-06',tage:1,gen:'–',kom:''},
+  {id:'E-0182',ma:'MA-A104',art:'Krank',von:'2026-02-14',bis:'2026-02-14',tage:0,gen:'–',kom:''},
+  {id:'E-0183',ma:'MA-A104',art:'Krank',von:'2026-03-02',bis:'2026-03-27',tage:20,gen:'–',kom:''},
+  {id:'E-0184',ma:'MA-A104',art:'Krank',von:'2026-03-31',bis:'2026-04-02',tage:3,gen:'–',kom:''},
+  {id:'E-0185',ma:'MA-A104',art:'Krank',von:'2026-04-06',bis:'2026-04-30',tage:19,gen:'–',kom:''},
+  {id:'E-0186',ma:'MA-A104',art:'Krank',von:'2026-05-06',bis:'2026-05-06',tage:1,gen:'–',kom:''},
+  {id:'E-0187',ma:'MA-A104',art:'Krank',von:'2026-05-14',bis:'2026-05-14',tage:1,gen:'–',kom:''},
+  {id:'E-0188',ma:'MA-A104',art:'Krank',von:'2026-06-02',bis:'2026-06-06',tage:4,gen:'–',kom:''},
+  {id:'E-0189',ma:'MA-A104',art:'Krank',von:'2026-06-10',bis:'2026-06-13',tage:3,gen:'–',kom:''},
+  {id:'E-0190',ma:'MA-033',art:'Krank',von:'2026-01-08',bis:'2026-01-08',tage:1,gen:'–',kom:''},
+  {id:'E-0191',ma:'MA-033',art:'Krank',von:'2026-01-12',bis:'2026-01-12',tage:1,gen:'–',kom:''},
+  {id:'E-0192',ma:'MA-033',art:'Krank',von:'2026-01-23',bis:'2026-01-23',tage:1,gen:'–',kom:''},
+  {id:'E-0193',ma:'MA-033',art:'Krank',von:'2026-02-05',bis:'2026-02-05',tage:1,gen:'–',kom:''},
+  {id:'E-0194',ma:'MA-033',art:'Krank',von:'2026-02-13',bis:'2026-02-13',tage:1,gen:'–',kom:''},
+  {id:'E-0195',ma:'MA-033',art:'Krank',von:'2026-02-26',bis:'2026-02-27',tage:2,gen:'–',kom:''},
+  {id:'E-0196',ma:'MA-033',art:'Krank',von:'2026-03-13',bis:'2026-03-13',tage:1,gen:'–',kom:''},
+  {id:'E-0197',ma:'MA-033',art:'Krank',von:'2026-03-18',bis:'2026-03-18',tage:1,gen:'–',kom:''},
+  {id:'E-0198',ma:'MA-033',art:'Krank',von:'2026-04-09',bis:'2026-04-09',tage:1,gen:'–',kom:''},
+  {id:'E-0199',ma:'MA-033',art:'Krank',von:'2026-04-13',bis:'2026-04-21',tage:7,gen:'–',kom:''},
+  {id:'E-0200',ma:'MA-033',art:'Krank',von:'2026-04-28',bis:'2026-04-29',tage:2,gen:'–',kom:''},
+  {id:'E-0201',ma:'MA-033',art:'Krank',von:'2026-05-04',bis:'2026-05-07',tage:4,gen:'–',kom:''},
+  {id:'E-0202',ma:'MA-033',art:'Krank',von:'2026-06-02',bis:'2026-06-02',tage:1,gen:'–',kom:''},
+  {id:'E-0203',ma:'MA-033',art:'Krank',von:'2026-06-08',bis:'2026-06-09',tage:2,gen:'–',kom:''},
+  {id:'E-0204',ma:'MA-004',art:'Krank',von:'2026-01-06',bis:'2026-01-09',tage:4,gen:'–',kom:''},
+  {id:'E-0205',ma:'MA-A102',art:'Krank',von:'2026-04-08',bis:'2026-04-08',tage:1,gen:'–',kom:''},
+  {id:'E-0206',ma:'MA-A102',art:'Krank',von:'2026-05-07',bis:'2026-05-07',tage:1,gen:'–',kom:''},
+  {id:'E-0207',ma:'MA-A102',art:'Krank',von:'2026-06-15',bis:'2026-06-15',tage:1,gen:'–',kom:''},
+  {id:'E-0208',ma:'MA-002',art:'Krank',von:'2026-01-08',bis:'2026-01-09',tage:2,gen:'–',kom:''},
+  {id:'E-0209',ma:'MA-002',art:'Krank',von:'2026-01-27',bis:'2026-01-27',tage:1,gen:'–',kom:''},
+  {id:'E-0210',ma:'MA-002',art:'Krank',von:'2026-02-09',bis:'2026-02-11',tage:3,gen:'–',kom:''},
+  {id:'E-0211',ma:'MA-002',art:'Krank',von:'2026-02-27',bis:'2026-02-27',tage:1,gen:'–',kom:''},
+  {id:'E-0212',ma:'MA-002',art:'Krank',von:'2026-06-10',bis:'2026-06-10',tage:1,gen:'–',kom:''},
+  {id:'E-0213',ma:'MA-007',art:'Krank',von:'2026-01-02',bis:'2026-01-02',tage:1,gen:'–',kom:''},
+  {id:'E-0214',ma:'MA-007',art:'Krank',von:'2026-02-03',bis:'2026-02-06',tage:4,gen:'–',kom:''},
+  {id:'E-0215',ma:'MA-007',art:'Krank',von:'2026-03-05',bis:'2026-03-05',tage:1,gen:'–',kom:''},
+  {id:'E-0216',ma:'MA-007',art:'Krank',von:'2026-03-12',bis:'2026-03-12',tage:1,gen:'–',kom:''},
+  {id:'E-0217',ma:'MA-007',art:'Krank',von:'2026-06-06',bis:'2026-06-06',tage:0,gen:'–',kom:''},
+  {id:'E-0218',ma:'MA-007',art:'Krank',von:'2026-06-12',bis:'2026-06-12',tage:1,gen:'–',kom:''},
+  {id:'E-0219',ma:'MA-034',art:'Krank',von:'2026-06-04',bis:'2026-06-05',tage:2,gen:'–',kom:''},
+  {id:'E-0220',ma:'MA-A101',art:'Krank',von:'2026-01-09',bis:'2026-01-09',tage:1,gen:'–',kom:''},
+  {id:'E-0221',ma:'MA-A101',art:'Krank',von:'2026-04-10',bis:'2026-04-10',tage:1,gen:'–',kom:''},
+  {id:'E-0222',ma:'MA-A101',art:'Krank',von:'2026-04-20',bis:'2026-04-20',tage:1,gen:'–',kom:''},
+  {id:'E-0223',ma:'MA-A101',art:'Krank',von:'2026-04-24',bis:'2026-04-24',tage:1,gen:'–',kom:''},
+  {id:'E-0224',ma:'MA-A101',art:'Krank',von:'2026-05-22',bis:'2026-05-22',tage:1,gen:'–',kom:''},
+  {id:'E-0225',ma:'MA-A101',art:'Krank',von:'2026-05-26',bis:'2026-05-26',tage:1,gen:'–',kom:''},
+  {id:'E-0226',ma:'MA-A101',art:'Krank',von:'2026-06-03',bis:'2026-06-05',tage:3,gen:'–',kom:''},
+  {id:'E-0227',ma:'MA-A101',art:'Krank',von:'2026-06-11',bis:'2026-06-12',tage:2,gen:'–',kom:''},
+  {id:'E-0228',ma:'MA-A101',art:'Krank',von:'2026-06-16',bis:'2026-06-16',tage:1,gen:'–',kom:''},
+  {id:'E-0229',ma:'MA-020',art:'Krank',von:'2026-02-04',bis:'2026-02-04',tage:1,gen:'–',kom:''},
+  {id:'E-0230',ma:'MA-020',art:'Krank',von:'2026-02-25',bis:'2026-02-26',tage:2,gen:'–',kom:''},
+  {id:'E-0231',ma:'MA-020',art:'Krank',von:'2026-03-03',bis:'2026-03-03',tage:1,gen:'–',kom:''},
+  {id:'E-0232',ma:'MA-020',art:'Krank',von:'2026-03-16',bis:'2026-03-19',tage:4,gen:'–',kom:''},
+  {id:'E-0233',ma:'MA-020',art:'Krank',von:'2026-03-23',bis:'2026-03-26',tage:4,gen:'–',kom:''},
+  {id:'E-0234',ma:'MA-025',art:'Krank',von:'2026-01-05',bis:'2026-01-09',tage:5,gen:'–',kom:''},
+  {id:'E-0235',ma:'MA-025',art:'Krank',von:'2026-01-16',bis:'2026-01-16',tage:1,gen:'–',kom:''},
+  {id:'E-0236',ma:'MA-025',art:'Krank',von:'2026-02-02',bis:'2026-02-02',tage:1,gen:'–',kom:''},
+  {id:'E-0237',ma:'MA-025',art:'Krank',von:'2026-02-10',bis:'2026-02-10',tage:1,gen:'–',kom:''},
+  {id:'E-0238',ma:'MA-025',art:'Krank',von:'2026-02-24',bis:'2026-02-26',tage:3,gen:'–',kom:''},
+  {id:'E-0239',ma:'MA-025',art:'Krank',von:'2026-03-18',bis:'2026-03-20',tage:3,gen:'–',kom:''},
+  {id:'E-0240',ma:'MA-025',art:'Krank',von:'2026-03-27',bis:'2026-03-27',tage:1,gen:'–',kom:''},
+  {id:'E-0241',ma:'MA-025',art:'Krank',von:'2026-04-13',bis:'2026-04-13',tage:1,gen:'–',kom:''},
+  {id:'E-0242',ma:'MA-025',art:'Krank',von:'2026-05-22',bis:'2026-05-22',tage:1,gen:'–',kom:''},
+  {id:'E-0243',ma:'MA-025',art:'Krank',von:'2026-06-06',bis:'2026-06-06',tage:0,gen:'–',kom:''},
+  {id:'E-0244',ma:'MA-025',art:'Krank',von:'2026-06-16',bis:'2026-06-17',tage:2,gen:'–',kom:''}
+];
+
+// ═══════════════════════════════════════════════════════
+//  HILFSFUNKTIONEN
+// ═══════════════════════════════════════════════════════
+function dISO(d){return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+function z(n){return String(n).padStart(2,'0');}
+function today(){return dISO(new Date());}
+function fmtD(s){if(!s)return'–';var p=s.split('-');return p[2]+'.'+p[1]+'.'+p[0];}
+function isoWeek(d){
+  var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  var dn=dt.getUTCDay()||7;dt.setUTCDate(dt.getUTCDate()+4-dn);
+  var y0=new Date(Date.UTC(dt.getUTCFullYear(),0,1));
+  return Math.ceil(((dt-y0)/864e5+1)/7);
+}
+function weekDays(d){
+  var day=d.getDay(),mon=new Date(d);
+  mon.setDate(d.getDate()-(day===0?6:day-1));
+  var r=[];for(var i=0;i<5;i++){var x=new Date(mon);x.setDate(mon.getDate()+i);r.push(x);}return r;
+}
+function netDays(a,b){
+  if(!a||!b)return 0;
+  var s=new Date(a),e=new Date(b),n=0,d=new Date(s);
+  if(s>e)return 0;
+  while(d<=e){var ds=dISO(d);if(d.getDay()>0&&d.getDay()<6&&!FEIERTAGE[ds])n++;d.setDate(d.getDate()+1);}
+  return n;
+}
+function getMa(id){return STAMM.find(function(m){return m.id===id;})||{n:id,f:'–',c:'–',ju:0,b:0,ue:0};}
+function maName(id){var m=STAMM.find(function(x){return x.id===id;});return m?m.n:id;}
+function artStyle(art){
+  if(art==='Urlaub')return 'background:'+var2('#E6F1FB')+';color:#0C447C';
+  if(art==='Krank')return 'background:#FCEBEB;color:#791F1F';
+  if(art==='Bildungsurlaub')return 'background:#D1FAE5;color:#065F46';
+  if(art==='Abwesenheit')return 'background:'+var2('#FAEEDA')+';color:#633806';
+  if(art==='Fortbildung')return 'background:#FAECE7;color:#712B13';
+  if(art==='Sonderurlaub')return 'background:#EEEDFE;color:#3C3489';
+  if(art==='Freistellung')return 'background:#FBEAF0;color:#72243E';
+  return 'background:#f1efe8;color:#5f5e5a';
+}
+function artClass(art){
+  if(art==='Urlaub')return 'wk-url';
+  if(art==='Krank')return 'wk-krank';
+  if(art==='Abwesenheit')return 'wk-ab';
+  if(art==='Fortbildung')return 'wk-fort';
+  if(art==='Sonderurlaub'||art==='Freistellung')return 'wk-son';
+  if(art==='Bildungsurlaub')return 'wk-bild';
+  return 'wk-son';
+}
+function genStyle(g){
+  if(g==='Ja')return 'background:#EAF3DE;color:#085041';
+  if(g==='Nein')return 'background:#FCEBEB;color:#791F1F';
+  return 'background:#f1efe8;color:#888';
+}
+function var2(v){return v;} // placeholder for future theming
+
+// ═══════════════════════════════════════════════════════
+//  STORAGE – MIT VERIFIKATION
+// ═══════════════════════════════════════════════════════
+var D = {entries:[], nid:1, isHR:false, weekOff:0, view:'uebersicht', tab:'url', sortMode:'von_desc',
+  uf:{ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''},
+  filter:{ma:'',erfVon:'',erfBis:''},
+  konto:{selMa:'', year:2026},
+  editId:null};
+
+function storageOK(){
+  try{localStorage.setItem('__gt__','1');var r=localStorage.getItem('__gt__')==='1';localStorage.removeItem('__gt__');return r;}
+  catch(e){return false;}
+}
+
+function dbSave(){
+  var payload={entries:D.entries, nid:D.nid, ts:new Date().toISOString()};
+  var json=JSON.stringify(payload);
+  // 1. Schreiben
+  try{localStorage.setItem(SK,json);}
+  catch(e){setSaveStatus('err','⚠ Speicherfehler: '+e.message);return false;}
+  // 2. Lesen & Verifikation
+  try{
+    var check=localStorage.getItem(SK);
+    if(!check){setSaveStatus('err','⚠ Verifikation fehlgeschlagen');return false;}
+    var parsed=JSON.parse(check);
+    if(!Array.isArray(parsed.entries)||parsed.entries.length!==D.entries.length){
+      setSaveStatus('err','⚠ Datenlänge stimmt nicht');return false;
+    }
+  }catch(e){setSaveStatus('err','⚠ Lesefehler: '+e.message);return false;}
+  setSaveStatus('ok','✓ Gespeichert ('+D.entries.length+' Einträge)');
+  return true;
+}
+
+function dbLoad(){
+  try{
+    var raw=localStorage.getItem(SK);
+    var seededFlag=null;
+    try{seededFlag=localStorage.getItem(SK+'-seeded');}catch(e){}
+    if(!raw){
+      // Erster Start: historische Daten aus SEED übernehmen
+      D.entries=JSON.parse(JSON.stringify(SEED));
+      D.nid=SEED.length+1;
+      dbSave();
+      try{localStorage.setItem(SK+'-seeded','1');}catch(e){}
+      setSaveStatus('ok','Erststart: '+D.entries.length+' historische Einträge geladen');
+      setTimeout(function(){setSaveStatus('','');},3000);
+      return;
+    }
+    var p=JSON.parse(raw);
+    if(!Array.isArray(p.entries)){console.warn('GETEQ: Ungültiges Format');return;}
+    D.entries=p.entries;
+    D.nid=p.nid||1;
+    // Backup: leere Save-Datei + noch nie geseedet → automatisch nachladen
+    if(D.entries.length===0 && !seededFlag && Array.isArray(SEED) && SEED.length>0){
+      D.entries=JSON.parse(JSON.stringify(SEED));
+      D.nid=SEED.length+1;
+      dbSave();
+      try{localStorage.setItem(SK+'-seeded','1');}catch(e){}
+      setSaveStatus('ok','Historische Daten nachgeladen: '+D.entries.length);
+      setTimeout(function(){setSaveStatus('','');},3000);
+      return;
+    }
+    setSaveStatus('ok','Geladen ('+D.entries.length+' Einträge)');
+    setTimeout(function(){setSaveStatus('','');},3000);
+  }catch(e){
+    console.error('GETEQ Load Error:',e);
+    setSaveStatus('err','⚠ Ladefehler');
+  }
+}
+
+var _saveTimer=null;
+function setSaveStatus(type,txt){
+  var el=document.getElementById('save-dot');
+  if(!el)return;
+  el.className='save-row'+(type?' '+type:'');
+  el.textContent=txt;
+  clearTimeout(_saveTimer);
+  if(type==='ok'){_saveTimer=setTimeout(function(){el.className='save-row';el.textContent='';},3000);}
+}
+
+function newId(){
+  var id='E-'+String(D.nid).padStart(4,'0');
+  D.nid++;
+  return id;
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════
+function exportJSON(){
+  var json=JSON.stringify({entries:D.entries,nid:D.nid,stamm:STAMM,ts:new Date().toISOString()},null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();
+  URL.revokeObjectURL(url);
+  flash('JSON-Export gestartet ✓','ok');
+}
+function importJSON(){document.getElementById('imp-file').click();}
+function doImportFile(inp){
+  var f=inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var p=JSON.parse(e.target.result);
+      if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');
+      D.entries=p.entries;D.nid=p.nid||D.nid;
+      dbSave();render();
+      flash('Import: '+p.entries.length+' Einträge geladen ✓','ok');
+    }catch(err){flash('Importfehler: '+err.message,'err');}
+  };
+  r.readAsText(f);
+  inp.value='';
+}
+
+function exportCSV(){
+  var rows=[['Eintrag-ID','Name','MA_ID','Funktion','Gruppe','Art','Von','Bis','Arbeitstage','Genehmigt','Erfasst am','Kommentar']];
+  D.entries.forEach(function(e){
+    var ma=getMa(e.ma);
+    rows.push([e.id,ma.n,e.ma,ma.f,ma.grp==='fest'?'Festangestellt':(ma.grp==='sonst'?'Sonstige/Extern':'—'),e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',fmtErfCsv(e.erfasstAm),e.kom||'']);
+  });
+  var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.csv';a.click();
+  URL.revokeObjectURL(url);
+  flash('CSV-Export gestartet ✓','ok');
+}
+
+// ── PERSONALABRECHNUNG: getrennte Exports pro Gruppe (fest/sonst) und Art (AU/Urlaub) ──
+// AU = Art "Krank"; Urlaub = Art "Urlaub". Monatsfilter bezieht sich auf das Von-Datum.
+function filterForPayroll(grp,art,monthISO){
+  return D.entries.filter(function(e){
+    var ma=getMa(e.ma);
+    if((ma.grp||'')!==grp)return false;
+    if(art==='au' && e.art!=='Krank')return false;
+    if(art==='urlaub' && e.art!=='Urlaub')return false;
+    if(monthISO && e.von.slice(0,7)!==monthISO)return false;
+    return true;
+  }).sort(function(a,b){return a.ma.localeCompare(b.ma)||a.von.localeCompare(b.von);});
+}
+
+function payrollLabel(grp,art){
+  return (grp==='fest'?'Festangestellte':'Sonstige MA')+' – '+(art==='au'?'AU (Krank)':'Urlaub');
+}
+
+function exportPayrollCSV(grp,art){
+  var monthISO=document.getElementById('payroll-month')?document.getElementById('payroll-month').value:'';
+  var arr=filterForPayroll(grp,art,monthISO);
+  var monthLbl=monthISO?monthISO:'gesamt';
+  var head='"GETEQ – '+payrollLabel(grp,art)+' – '+monthLbl+'"\n"Erstellt am";"'+fmtErfCsv(new Date().toISOString())+'"\n"Einträge";"'+arr.length+'"\n\n';
+  var cols=(art==='au')
+    ? ['Name','MA_ID','Funktion','Von','Bis','Kalendertage','Arbeitstage','Kommentar']
+    : ['Name','MA_ID','Funktion','Von','Bis','Arbeitstage','Status','Kommentar'];
+  var rows=[cols];
+  arr.forEach(function(e){
+    var ma=getMa(e.ma);
+    var kt=diffCalDays(e.von,e.bis||e.von);
+    if(art==='au'){
+      rows.push([ma.n,e.ma,ma.f,fmtD(e.von),fmtD(e.bis||e.von),kt,e.tage,e.kom||'']);
+    } else {
+      rows.push([ma.n,e.ma,ma.f,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);
+    }
+  });
+  // Summenzeile
+  if(arr.length){
+    var sumT=arr.reduce(function(s,e){return s+((+e.tage)||0);},0);
+    if(art==='au'){
+      var sumK=arr.reduce(function(s,e){return s+diffCalDays(e.von,e.bis||e.von);},0);
+      rows.push(['SUMME','','','','',sumK,sumT,'']);
+    } else {
+      rows.push(['SUMME','','','','',sumT,'','']);
+    }
+  }
+  var csv=head+rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;
+  a.download='GETEQ_'+(grp==='fest'?'Fest':'Sonst')+'_'+(art==='au'?'AU':'Urlaub')+'_'+monthLbl+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  flash(payrollLabel(grp,art)+': '+arr.length+' Einträge exportiert ✓','ok');
+}
+
+function diffCalDays(a,b){
+  if(!a||!b)return 0;
+  var s=new Date(a),e=new Date(b);
+  if(s>e)return 0;
+  return Math.round((e-s)/86400000)+1;
+}
+
+function exportPayrollJSON(){
+  var monthISO=document.getElementById('payroll-month')?document.getElementById('payroll-month').value:'';
+  var monthLbl=monthISO?monthISO:'gesamt';
+  var mkList=function(grp,art){
+    return filterForPayroll(grp,art,monthISO).map(function(e){
+      var ma=getMa(e.ma);
+      var obj={eintrag_id:e.id,name:ma.n,ma_id:e.ma,funktion:ma.f,von:e.von,bis:e.bis||e.von,arbeitstage:e.tage,kommentar:e.kom||'',erfasst_am:e.erfasstAm||null};
+      if(art==='au'){obj.kalendertage=diffCalDays(e.von,e.bis||e.von);}
+      else{obj.genehmigt=e.gen||'–';}
+      return obj;
+    });
+  };
+  var payload={
+    meta:{
+      erstellt_am:new Date().toISOString(),
+      zeitraum:monthLbl,
+      hinweis:'AU-Meldungen (Krank) für Personalabrechnung. Rückerstattung durch Krankenkassen ab dem 1. Tag.',
+      erklaerung_arten:{au:'Arbeitsunfähigkeit / Krankmeldung (Art "Krank")',urlaub:'Erholungsurlaub (Art "Urlaub")'}
+    },
+    festangestellte:{au:mkList('fest','au'),urlaub:mkList('fest','urlaub')},
+    sonstige_ma:{au:mkList('sonst','au'),urlaub:mkList('sonst','urlaub')}
+  };
+  var json=JSON.stringify(payload,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='GETEQ_Personalabrechnung_'+monthLbl+'.json';a.click();
+  URL.revokeObjectURL(url);
+  var total=payload.festangestellte.au.length+payload.festangestellte.urlaub.length+payload.sonstige_ma.au.length+payload.sonstige_ma.urlaub.length;
+  flash('Personalabrechnung-JSON: '+total+' Einträge exportiert ✓','ok');
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════
+function doLogin(){
+  var v=document.getElementById('lpw').value;
+  var err=document.getElementById('lerr');
+  if(v===PIN_APP||v===PIN_HR){
+    if(v===PIN_HR)D.isHR=true;
+    sessionStorage.setItem('geteq-ok','1');
+    if(D.isHR)sessionStorage.setItem('geteq-hr','1');
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    dbLoad();
+    render();
+  } else {
+    err.textContent='Falscher PIN';
+    document.getElementById('lpw').value='';
+    document.getElementById('lpw').focus();
+    setTimeout(function(){err.textContent='';},2000);
+  }
+}
+function hrUnlock(){
+  var v=prompt('HR-PIN eingeben:');
+  if(v===PIN_HR){D.isHR=true;sessionStorage.setItem('geteq-hr','1');flash('HR-Modus aktiv','ok');render();}
+  else if(v!==null)flash('Falscher PIN','err');
+}
+function hrLock(){D.isHR=false;sessionStorage.removeItem('geteq-hr');flash('HR-Modus deaktiviert');render();}
+function doLogout(){sessionStorage.clear();location.reload();}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════
+var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['eingabe','+ Neue Meldung'],['einst','⚙ Einstellungen']];
+
+var G={
+  view:function(name){D.view=name;renderNav();renderContent();window.scrollTo({top:0,behavior:'smooth'});},
+  weekOff:function(n){D.weekOff=n;renderContent();}
+};
+
+function flash(msg,type){
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast show '+(type||'ok');
+  clearTimeout(flash._t);
+  flash._t=setTimeout(function(){t.className='toast';},2800);
+}
+
+function render(){renderHeader();renderNav();renderContent();}
+
+function renderHeader(){
+  var d=new Date().toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('hdr-wrap').innerHTML=
+    '<div class="hdr">'+
+    '<div class="hdr-l">GETEQ <em>Abwesenheitsmanagement 2026</em></div>'+
+    '<div class="hdr-r">'+
+    '<span id="save-dot" class="save-row"></span>'+
+    (D.isHR?'<span class="hr-badge">HR aktiv</span>':'<button class="hbtn" onclick="hrUnlock()">HR-Modus</button>')+
+    '<button class="hbtn" onclick="exportCSV()">↓ CSV</button>'+
+    '<button class="hbtn" onclick="exportJSON()">↓ JSON</button>'+
+    '<button class="hbtn" onclick="doLogout()">⏏ Abmelden</button>'+
+    '<span style="color:#B5D4F4;font-size:11px">'+d+'</span>'+
+    '</div></div>';
+}
+
+function renderNav(){
+  var el=document.getElementById('nav-bar');
+  if(!el){el=document.querySelector('.nav-bar');if(el)el.id='nav-bar';}
+  if(!el)return;
+  var offen=D.entries.filter(function(e){return e.gen==='Ausstehend';}).length;
+  var html='';
+  VIEWS.forEach(function(v){
+    var act=D.view===v[0];
+    html+='<button class="ntab'+(act?' on':'')+'" onclick="G.view(\''+v[0]+'\')">'+v[1];
+    if(v[0]==='eingabe'&&offen>0)html+='<span class="nbadge">'+offen+'</span>';
+    html+='</button>';
+  });
+  el.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════════════════════
+function renderContent(){
+  var html='';
+  var t=today();
+  var entries=D.entries;
+  if(D.view==='uebersicht') html=viewUebersicht(entries,t);
+  else if(D.view==='woche') html=viewWoche(entries,t);
+  else if(D.view==='konto') html=viewKonto(entries,t);
+  else if(D.view==='eingabe') html=viewEingabe(entries,t);
+  else if(D.view==='einst') html=viewEinstellungen(entries);
+  document.getElementById('content').innerHTML=html;
+}
+
+// ─── ÜBERSICHT ────────────────────────────────────────────────────────
+function viewUebersicht(entries,t){
+  var abwH=entries.filter(function(e){return e.gen!=='Nein'&&e.von<=t&&(e.bis||e.von)>=t;});
+  var offen=entries.filter(function(e){return e.gen==='Ausstehend';});
+  var html='';
+
+  // Offene Genehmigungen (nur HR)
+  if(D.isHR&&offen.length>0){
+    html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px;padding:10px 12px;margin-bottom:12px">';
+    html+='<div style="font-size:12px;font-weight:500;color:'+var2('#085041')+';margin-bottom:8px">⏳ Offene Genehmigungen ('+offen.length+')</div>';
+    offen.forEach(function(e){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(159,225,203,.5);flex-wrap:wrap">';
+      html+='<span style="flex:1;font-size:12px"><strong>'+maName(e.ma)+'</strong> · <span style="color:#888">'+e.ma+'</span> · '+getMa(e.ma).f+' · '+fmtD(e.von)+(e.bis&&e.bis!==e.von?' – '+fmtD(e.bis):'')+' · '+e.tage+' Tage</span>';
+      html+='<button class="btn btn-ok btn-sm" onclick="approve(\''+e.id+'\')">Genehmigen</button>';
+      html+='<button class="btn btn-err btn-sm" onclick="deny(\''+e.id+'\')">Ablehnen</button>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+
+  // KPI Karten
+  html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  [
+    {l:'Heute abwesend',v:abwH.length,sub:abwH.length?abwH.slice(0,3).map(function(e){return maName(e.ma);}).join(', '):'–',c:abwH.length?'#0C447C':undefined},
+    {l:'Offene Anträge', v:offen.length,sub:'Urlaub – ausstehend',c:offen.length?'#633806':undefined},
+    {l:'Einträge gesamt',v:entries.length,sub:STAMM.filter(function(m){return m.on;}).length+' MA aktiv'}
+  ].forEach(function(x){
+    html+='<div class="stat"><div style="font-size:11px;color:#888;margin-bottom:3px">'+x.l+'</div>';
+    html+='<div style="font-size:22px;font-weight:500;line-height:1.1;color:'+(x.c||'#1a1a1a')+'">'+x.v+'</div>';
+    html+='<div style="font-size:11px;color:#aaa;margin-top:3px">'+x.sub+'</div></div>';
+  });
+  html+='</div>';
+
+  // ── FILTER ─────────────────────────────────────────────────────
+  var f=D.filter;
+  var maOptsF=STAMM.slice().sort(function(a,b){return a.n.localeCompare(b.n,'de');}).map(function(m){
+    return '<option value="'+m.id+'"'+(f.ma===m.id?' selected':'')+'>'+m.n+(m.on?'':' (ausgeschieden)')+'</option>';
+  }).join('');
+  html+='<div class="card" style="margin-bottom:12px;padding:10px 12px">';
+  html+='<div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">';
+  html+='<div style="flex:1;min-width:180px"><label class="lbl">Mitarbeiter/in</label>';
+  html+='<select onchange="setFilter(\'ma\',this.value)"><option value="">– alle –</option>'+maOptsF+'</select></div>';
+  html+='<div style="min-width:140px"><label class="lbl">Erfasst von</label>';
+  html+='<input type="date" value="'+f.erfVon+'" onchange="setFilter(\'erfVon\',this.value)"></div>';
+  html+='<div style="min-width:140px"><label class="lbl">Erfasst bis</label>';
+  html+='<input type="date" value="'+f.erfBis+'" onchange="setFilter(\'erfBis\',this.value)"></div>';
+  html+='<button class="btn btn-sm" onclick="resetFilter()" style="height:34px">Filter zurücksetzen</button>';
+  html+='</div>';
+  if(f.erfVon||f.erfBis){
+    html+='<div style="font-size:10px;color:#888;margin-top:6px;line-height:1.5">Hinweis: Der Erfassungsdatum-Filter schließt historische Bestandsdaten aus, da diese vor der Erfassungs-Aufzeichnung importiert wurden.</div>';
+  }
+  html+='</div>';
+
+  // ── GEFILTERTE EINTRÄGE ─────────────────────────────────────────
+  var filtered=applyFilter(entries);
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;flex-wrap:wrap;gap:6px">';
+  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em">Einträge ('+filtered.length+' von '+entries.length+')</div>';
+  html+='<select onchange="setSort(this.value)" style="font-size:11px;padding:3px 6px;border:1px solid #d8d8d5;border-radius:5px;font-family:inherit">';
+  [
+    ['von_desc','Datum ↓ neueste zuerst'],
+    ['von_asc','Datum ↑ älteste zuerst'],
+    ['name_asc','Name A→Z'],
+    ['name_desc','Name Z→A'],
+    ['erfassung_desc','Erfassung ↓ zuletzt erfasst'],
+    ['erfassung_asc','Erfassung ↑ zuerst erfasst']
+  ].forEach(function(o){html+='<option value="'+o[0]+'"'+(D.sortMode===o[0]?' selected':'')+'>'+o[1]+'</option>';});
+  html+='</select></div>';
+
+  var sortEnt=sortEntries(filtered,D.sortMode);
+  if(sortEnt.length){
+    html+='<div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Funktion</th><th>Art</th><th>Von</th><th>Bis</th><th>Tage</th><th>Status</th><th>Erfasst</th><th></th></tr></thead><tbody>';
+    sortEnt.forEach(function(e){
+      var ma=getMa(e.ma);
+      html+='<tr><td><strong>'+ma.n+'</strong><br><span style="font-size:9px;color:#aaa">'+e.ma+'</span></td>';
+      html+='<td style="color:#555">'+ma.f+'</td>';
+      html+='<td><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span></td>';
+      html+='<td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td><td>'+e.tage+'</td>';
+      html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+e.gen+'</span></td>';
+      html+='<td style="font-size:10px;color:#888;white-space:nowrap">'+fmtErf(e.erfasstAm)+'</td>';
+      html+='<td style="white-space:nowrap"><button class="btn btn-sm" onclick="editEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 6px">✏</button> ';
+      html+='<button class="btn btn-sm" onclick="delEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 6px;color:#A32D2D">✕</button></td>';
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+  } else {
+    html+='<div style="text-align:center;color:#aaa;padding:20px;font-size:12px">Keine Einträge für den gewählten Filter</div>';
+  }
+  return html;
+}
+
+function fmtErf(iso){
+  if(!iso)return '–';
+  var d=new Date(iso);
+  if(isNaN(d.getTime()))return '–';
+  return z(d.getDate())+'.'+z(d.getMonth()+1)+'.'+d.getFullYear();
+}
+function fmtErfCsv(iso){
+  if(!iso)return '';
+  var d=new Date(iso);
+  if(isNaN(d.getTime()))return '';
+  return z(d.getDate())+'.'+z(d.getMonth()+1)+'.'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes());
+}
+function applyFilter(entries){
+  var f=D.filter;
+  return entries.filter(function(e){
+    if(f.ma && e.ma!==f.ma)return false;
+    if(f.erfVon){
+      if(!e.erfasstAm)return false;
+      if(e.erfasstAm.slice(0,10)<f.erfVon)return false;
+    }
+    if(f.erfBis){
+      if(!e.erfasstAm)return false;
+      if(e.erfasstAm.slice(0,10)>f.erfBis)return false;
+    }
+    return true;
+  });
+}
+function setFilter(k,v){D.filter[k]=v;renderContent();}
+function resetFilter(){D.filter={ma:'',erfVon:'',erfBis:''};renderContent();}
+
+// ─── WOCHENPLAN ───────────────────────────────────────────────────────
+function wochenplanHTML(entries,wkD,wkStart,wkEnd,t,compact){
+  var kw=isoWeek(wkD[0]);
+  var DE=['Mo','Di','Mi','Do','Fr'];
+  var cols='160px repeat(5,1fr)';
+  if(window.innerWidth<500)cols='110px repeat(5,1fr)';
+
+  // Wer ist diese Woche abwesend?
+  var wkMAs=STAMM.filter(function(ma){
+    return ma.on&&wkD.some(function(d){
+      var ds=dISO(d);
+      return entries.some(function(e){return e.ma===ma.id&&e.gen!=='Nein'&&e.von<=ds&&(e.bis||e.von)>=ds;});
+    });
+  });
+
+  var html='<div class="wk-outer">';
+  html+='<div class="wk-nav">';
+  html+='<button onclick="G.weekOff('+(D.weekOff-1)+')">← Vorwoche</button>';
+  html+='<span style="font-size:12px;font-weight:600;color:'+NAVY+'">KW '+kw+'</span>';
+  html+='<span style="font-size:11px;color:#888">'+fmtD(wkStart)+' – '+fmtD(wkEnd)+'</span>';
+  html+='<button onclick="G.weekOff('+(D.weekOff+1)+')">Folgewoche →</button>';
+  html+='</div>';
+
+  // Header-Zeile
+  html+='<div style="display:grid;grid-template-columns:'+cols+';gap:2px;margin-bottom:4px">';
+  html+='<div></div>';
+  wkD.forEach(function(d,i){
+    var ds=dISO(d);
+    var isT=ds===t;
+    var isFt=!!FEIERTAGE[ds];
+    html+='<div class="wk-head'+(isT?' today':'')+'">';
+    html+=DE[i]+'<br><span style="font-size:9px;font-weight:400;color:'+(isFt?'#aaa':'inherit')+'">'+fmtD(ds)+(isFt?'*':'')+'</span></div>';
+  });
+  html+='</div>';
+
+  if(wkMAs.length===0){
+    html+='<div style="text-align:center;color:#aaa;padding:20px;font-size:12px">✅ Alle Mitarbeitenden diese Woche anwesend</div>';
+  } else {
+    wkMAs.forEach(function(ma){
+      html+='<div style="display:grid;grid-template-columns:'+cols+';gap:2px;margin-bottom:2px">';
+      html+='<div class="wk-name" title="'+ma.f+' · '+ma.id+'">'+ma.n+'<br><span style="font-size:9px;color:#aaa;font-weight:400">'+ma.f+'</span></div>';
+      wkD.forEach(function(d){
+        var ds=dISO(d);
+        var isFt=!!FEIERTAGE[ds];
+        if(isFt){html+='<div class="wk-cell wk-holiday" title="'+FEIERTAGE[ds]+'">FT</div>';return;}
+        var abs=entries.filter(function(e){return e.ma===ma.id&&e.gen!=='Nein'&&e.von<=ds&&(e.bis||e.von)>=ds;});
+        if(abs.length===0){
+          html+='<div class="wk-cell wk-empty'+(ds===t?' today':'')+'" title="Anwesend"></div>';
+        } else {
+          var e=abs[0];
+          var short=e.art.slice(0,2);
+          html+='<div class="wk-cell '+artClass(e.art)+'" title="'+e.art+(e.tage?' · '+e.tage+'d':'')+'">';
+          html+=short+'</div>';
+        }
+      });
+      html+='</div>';
+    });
+  }
+
+  // Legende
+  html+='<div class="wk-legend">';
+  [['wk-url','Urlaub'],['wk-krank','Krank'],['wk-bild','Bildungsurlaub'],['wk-fort','Fortbildung'],['wk-ab','Abwesenheit'],['wk-son','Sonderurlaub/Freistellung'],['wk-holiday','Feiertag']].forEach(function(l){
+    html+='<span><span class="badge wk-pill '+l[0]+'">'+l[1].slice(0,2)+'</span> '+l[1]+'</span>';
+  });
+  if(!compact)html+='<span>· * = Berliner Feiertag</span>';
+  html+='</div></div>';
+  return html;
+}
+
+function viewWoche(entries,t){
+  var baseD=new Date(Date.now()+D.weekOff*604800000);
+  var wkD=weekDays(baseD);
+  var wkStart=dISO(wkD[0]),wkEnd=dISO(wkD[4]);
+  return wochenplanHTML(entries,wkD,wkStart,wkEnd,t,false);
+}
+
+// ─── URLAUBSKONTO ─────────────────────────────────────────────────────
+function viewKonto(entries,t){
+  var html='<div style="overflow-x:auto">';
+  html+='<table><thead><tr>';
+  html+='<th>Name</th><th>MA_ID</th><th>Code</th><th>Funktion</th>';
+  html+='<th style="text-align:center">Anspruch</th>';
+  html+='<th style="text-align:center">Grundansp.</th>';
+  html+='<th style="text-align:center">Übertrag VJ</th>';
+  html+='<th style="text-align:center">Genommen<br><span style="font-weight:400;font-size:9px">bis heute</span></th>';
+  html+='<th style="text-align:center">Geplant<br><span style="font-weight:400;font-size:9px">Rest 2026</span></th>';
+  html+='<th style="text-align:center">Rest</th>';
+  html+='<th style="min-width:90px">Fortschritt</th></tr></thead><tbody>';
+  var totA=0,totG=0,totP=0;
+  STAMM.filter(function(m){return m.on&&m.ju>0;}).forEach(function(ma){
+    var ue=ma.ue||0;
+    var allUrl=entries.filter(function(e){return e.ma===ma.id&&e.art==='Urlaub'&&e.gen==='Ja';});
+    var genT=allUrl.filter(function(e){return e.von<=t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
+    var planT=allUrl.filter(function(e){return e.von>t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
+    var rest=ma.ju-genT;
+    var pct=ma.ju>0?Math.min(110,Math.round((genT+planT)/ma.ju*100)):0;
+    var pctG=ma.ju>0?Math.min(100,Math.round(genT/ma.ju*100)):0;
+    var restC=rest<0?'#791F1F':rest<5?'#B45309':'#1a1a1a';
+    totA+=ma.ju;totG+=genT;totP+=planT;
+    html+='<tr'+(rest<0?' style="background:#FFF0F0"':ue>0?' style="background:#FFFBE6"':'')+'>'; 
+    html+='<td><strong>'+ma.n+'</strong></td>';
+    html+='<td style="font-size:10px;color:#888">'+ma.id+'</td>';
+    html+='<td><span class="badge" style="background:#f1efe8;color:#5f5e5a">'+ma.c+'</span></td>';
+    html+='<td style="font-size:11px;color:#555">'+ma.f+'</td>';
+    html+='<td style="text-align:center;font-weight:600">'+ma.ju+'</td>';
+    html+='<td style="text-align:center;color:#555">'+ma.b+'</td>';
+    html+='<td style="text-align:center;font-weight:'+(ue>0?'600':'400')+';color:'+(ue>0?'#085041':'#ccc')+'">'+ue+'</td>';
+    html+='<td style="text-align:center;font-weight:500;color:#0C447C">'+(genT||'—')+'</td>';
+    html+='<td style="text-align:center;color:#888">'+(planT||'—')+'</td>';
+    html+='<td style="text-align:center;font-weight:600;color:'+restC+'">'+rest+'</td>';
+    html+='<td><div style="position:relative;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;min-width:80px">';
+    html+='<div style="position:absolute;left:0;top:0;height:100%;width:'+Math.min(100,pct)+'%;background:#B5D4F4;border-radius:4px"></div>';
+    html+='<div style="position:absolute;left:0;top:0;height:100%;width:'+pctG+'%;background:'+NAVY+';border-radius:4px"></div>';
+    html+='</div><div style="font-size:9px;color:#aaa;text-align:right;margin-top:1px">'+pctG+'%</div></td>';
+    html+='</tr>';
+  });
+  html+='<tr style="background:#ececea;font-weight:600"><td colspan="4">Summe</td>';
+  html+='<td style="text-align:center">'+totA+'T</td><td></td><td></td>';
+  html+='<td style="text-align:center;color:#0C447C">'+totG+'T</td>';
+  html+='<td style="text-align:center;color:#888">'+totP+'T</td>';
+  html+='<td style="text-align:center">'+(totA-totG)+'T</td><td></td></tr>';
+  html+='</tbody></table></div>';
+  html+='<div style="font-size:10px;color:#aaa;margin-top:8px;padding:6px;display:flex;gap:16px;flex-wrap:wrap">';
+  html+='<span>■ <span style="color:'+NAVY+'">Genommen</span></span>';
+  html+='<span>■ <span style="color:#B5D4F4">Geplant</span></span>';
+  html+='<span style="background:#FFF0F0;padding:1px 4px;border-radius:3px">⚠ Rot = Anspruch überschritten</span>';
+  html+='<span style="background:#FFFBE6;padding:1px 4px;border-radius:3px">Gelb = Übertrag VJ</span>';
+  html+='<span>Stand: '+fmtD(t)+' · Feiertage abgezogen</span></div>';
+
+  // ── JAHRES-KALENDER PRO MA ─────────────────────────────────────
+  html+=jahreskalenderHTML(entries,t);
+  return html;
+}
+
+// Zeigt einen Jahres-Urlaubskalender für die ausgewählte Person (12 Monatskacheln)
+function jahreskalenderHTML(entries,t){
+  var sel=D.konto.selMa;
+  var year=D.konto.year||new Date().getFullYear();
+  var MNAMES=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  var DNAMES=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  var maOpts=STAMM.slice().sort(function(a,b){return a.n.localeCompare(b.n,'de');}).map(function(m){
+    return '<option value="'+m.id+'"'+(sel===m.id?' selected':'')+'>'+m.n+(m.on?'':' (ausgeschieden)')+'</option>';
+  }).join('');
+
+  var html='<div class="card" style="margin-top:18px;padding:14px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:end;flex-wrap:wrap;gap:10px;margin-bottom:12px">';
+  html+='<div style="flex:1;min-width:220px"><label class="lbl">Jahres-Kalender für</label>';
+  html+='<select onchange="setKontoMa(this.value)"><option value="">– Person wählen –</option>'+maOpts+'</select></div>';
+  html+='<div class="wk-nav" style="margin:0">';
+  html+='<button onclick="setKontoYear('+(year-1)+')">← '+(year-1)+'</button>';
+  html+='<span style="font-size:14px;font-weight:700;color:'+NAVY+';padding:0 8px">'+year+'</span>';
+  html+='<button onclick="setKontoYear('+(year+1)+')">'+(year+1)+' →</button>';
+  html+='</div></div>';
+
+  if(!sel){
+    html+='<div style="text-align:center;color:#aaa;padding:24px;font-size:12px">Wähle oben eine Person, um den Jahres-Kalender anzuzeigen.</div>';
+    html+='</div>';
+    return html;
+  }
+
+  var ma=getMa(sel);
+  // Alle Einträge dieser Person, egal ob genehmigt oder nicht
+  var maE=entries.filter(function(e){return e.ma===sel;});
+
+  html+='<div style="font-size:12px;color:#555;margin-bottom:10px"><strong>'+ma.n+'</strong> · '+ma.f+' · '+sel+' · Jahresanspruch '+ma.ju+' Tage</div>';
+
+  // 12 Monate im Grid
+  html+='<div class="jk-grid">';
+  for(var moi=0;moi<12;moi++){
+    // erster Wochentag des Monats (Mo=1..So=7)
+    var firstDow=(new Date(year,moi,1).getDay())||7;
+    var monStart=new Date(year,moi,1-(firstDow-1));
+    html+='<div class="jk-month">';
+    html+='<div class="jk-mtitle">'+MNAMES[moi]+'</div>';
+    html+='<div class="jk-drow">';
+    for(var di=0;di<7;di++){html+='<div class="jk-dn'+(di>=5?' we':'')+'">'+DNAMES[di]+'</div>';}
+    html+='</div>';
+    for(var ww=0;ww<6;ww++){
+      var wS=new Date(monStart);wS.setDate(monStart.getDate()+ww*7);
+      if(ww>0&&wS.getMonth()>moi&&wS.getFullYear()===year)break;
+      if(ww>0&&wS.getFullYear()>year)break;
+      html+='<div class="jk-drow">';
+      for(var dd=0;dd<7;dd++){
+        var cd=new Date(wS);cd.setDate(wS.getDate()+dd);
+        var cdiso=dISO(cd);
+        var inM=cd.getMonth()===moi&&cd.getFullYear()===year;
+        var isWE=dd>=5;
+        if(!inM){html+='<div class="jk-day out"></div>';continue;}
+        var ft=FEIERTAGE[cdiso];
+        // Absence for this person on that day
+        var ab=maE.filter(function(e){return e.gen!=='Nein'&&e.von<=cdiso&&(e.bis||e.von)>=cdiso;})[0];
+        var cls='jk-day', lbl=cd.getDate(), title=fmtD(cdiso);
+        if(ft){cls+=' ft';title+=' – '+ft;}
+        else if(ab){
+          if(ab.art==='Urlaub'){cls+=ab.gen==='Ja'?' url':' urlp';}
+          else if(ab.art==='Krank'){cls+=' krank';}
+          else if(ab.art==='Bildungsurlaub'){cls+=' bild';}
+          else if(ab.art==='Fortbildung'){cls+=' fort';}
+          else if(ab.art==='Sonderurlaub'||ab.art==='Freistellung'){cls+=' son';}
+          else if(ab.art==='Elternzeit'){cls+=' son';}
+          else{cls+=' ab';}
+          title+=' – '+ab.art+(ab.gen==='Ausstehend'?' (ausstehend)':'');
+        } else if(isWE){cls+=' we';}
+        if(cdiso===t)cls+=' today';
+        html+='<div class="'+cls+'" title="'+title+'">'+lbl+'</div>';
+      }
+      html+='</div>';
+    }
+    // Feiertagsliste dieses Monats
+    var ftList=Object.keys(FEIERTAGE).filter(function(d){return d.startsWith(year+'-'+z(moi+1));});
+    if(ftList.length){
+      html+='<div class="jk-ft">';
+      ftList.forEach(function(d){html+='● '+FEIERTAGE[d]+'<br>';});
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  html+='</div>';
+
+  // Zusammenfassung: Zähler pro Art im gewählten Jahr
+  var counts={};
+  maE.forEach(function(e){
+    if(!e.von||e.von.slice(0,4)!==String(year))return;
+    if(e.gen==='Nein')return;
+    counts[e.art]=(counts[e.art]||0)+((+e.tage)||0);
+  });
+  html+='<div style="margin-top:12px;padding-top:10px;border-top:1px solid #f0f0ee;font-size:11px;color:#555;display:flex;gap:14px;flex-wrap:wrap">';
+  html+='<strong style="color:'+NAVY+'">Summen '+year+':</strong>';
+  var artOrder=['Urlaub','Krank','Bildungsurlaub','Fortbildung','Sonderurlaub','Freistellung','Abwesenheit','Elternzeit','Sonstiges'];
+  var any=false;
+  artOrder.forEach(function(a){if(counts[a]){any=true;html+='<span><span class="badge" style="'+artStyle(a)+'">'+a+'</span> '+counts[a]+' T</span>';}});
+  if(!any)html+='<span style="color:#aaa">Keine Einträge in '+year+'</span>';
+  html+='</div>';
+
+  // Legende
+  html+='<div style="margin-top:10px;font-size:10px;color:#888;display:flex;gap:10px;flex-wrap:wrap">';
+  html+='<span><span class="jk-key url"></span> Urlaub genehmigt</span>';
+  html+='<span><span class="jk-key urlp"></span> Urlaub ausstehend</span>';
+  html+='<span><span class="jk-key krank"></span> Krank</span>';
+  html+='<span><span class="jk-key bild"></span> Bildungsurlaub</span>';
+  html+='<span><span class="jk-key fort"></span> Fortbildung</span>';
+  html+='<span><span class="jk-key son"></span> Sonder-/Freistellung</span>';
+  html+='<span><span class="jk-key ft"></span> Feiertag</span>';
+  html+='<span><span class="jk-key we"></span> Wochenende</span>';
+  html+='</div>';
+  html+='</div>';
+  return html;
+}
+function setKontoMa(v){D.konto.selMa=v;renderContent();}
+function setKontoYear(y){D.konto.year=y;renderContent();}
+
+// ─── EINGABE ──────────────────────────────────────────────────────────
+function viewEingabe(entries,t){
+  var uf=D.uf;
+  var maOpts=STAMM.filter(function(m){return m.on;}).slice().sort(function(a,b){return a.n.localeCompare(b.n,'de');}).map(function(m){
+    return '<option value="'+m.id+'"'+(uf.ma===m.id?' selected':'')+'>'+m.n+' – '+m.f+'</option>';
+  }).join('');
+  var artOpts=ART_ALL.map(function(a){return'<option'+(uf.art===a?' selected':'')+'>'+a+'</option>';}).join('');
+  var d_u=netDays(uf.von,uf.bis);
+  var brauchtGen=ART_GEN.indexOf(uf.art)>=0;
+  var genOpts=['Ausstehend','Ja','Nein'].map(function(g){return'<option value="'+g+'"'+(uf.gen===g?' selected':'')+'>'+g+'</option>';}).join('');
+
+  var html='<div style="display:flex;gap:14px;flex-wrap:wrap">';
+  html+='<div class="card" style="flex:1;min-width:260px">';
+  if(D.editId){
+    html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:6px;padding:7px 10px;font-size:12px;color:#085041;margin-bottom:10px">✏ Bearbeitungsmodus: '+D.editId+'</div>';
+  }
+  html+='<div class="row"><div><label class="lbl">Mitarbeiter/in *</label><select onchange="ufSet(\'ma\',this.value)"><option value="">– wählen –</option>'+maOpts+'</select></div>';
+  html+='<div><label class="lbl">Art *</label><select onchange="ufSet(\'art\',this.value)">'+artOpts+'</select></div></div>';
+  html+='<div class="row"><div><label class="lbl">Von *</label><input type="date" value="'+uf.von+'" onchange="ufSet(\'von\',this.value)"></div>';
+  html+='<div><label class="lbl">Bis</label><input type="date" value="'+(uf.bis||'')+'" onchange="ufSet(\'bis\',this.value)"></div></div>';
+  html+='<div style="display:flex;justify-content:space-between;background:#ececea;border:1px solid #d8d8d5;border-radius:6px;padding:7px 10px;margin-bottom:9px">';
+  html+='<span style="font-size:12px;color:#888">Arbeitstage Mo–Fr (ohne Feiertage)</span>';
+  html+='<span style="font-weight:500;color:'+(d_u>0?'#085041':'#aaa')+'">'+(d_u||'–')+'</span></div>';
+  if(brauchtGen||D.isHR){
+    html+='<div style="margin-bottom:9px"><label class="lbl">Genehmigungsstatus</label><select onchange="ufSet(\'gen\',this.value)">'+genOpts+'</select></div>';
+  }
+  html+='<div style="margin-bottom:9px"><label class="lbl">Kommentar</label><input type="text" value="'+esc(uf.kom)+'" placeholder="optional – keine personenbez. Angaben" onchange="ufSet(\'kom\',this.value)" onkeydown="if(event.key===\'Enter\')saveEntry()"></div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button onclick="saveEntry()" '+(uf.ma?'':'disabled')+' style="flex:1;padding:9px;font-weight:500;border:none;border-radius:6px;background:'+(uf.ma?NAVY:'#d8d8d5')+';color:'+(uf.ma?'#fff':'#aaa');
+  html+='">'+( D.editId?'✓ Aktualisieren':'+ Speichern')+'</button>';
+  if(D.editId){html+='<button onclick="cancelEdit()" class="btn btn-sm">Abbrechen</button>';}
+  html+='</div></div>';
+
+  // Rechte Spalte: letzte Einträge dieser MA
+  html+='<div style="flex:0 0 280px;min-width:240px">';
+  if(uf.ma){
+    var mEnt=entries.filter(function(e){return e.ma===uf.ma;}).sort(function(a,b){return b.von.localeCompare(a.von);}).slice(0,12);
+    html+='<div class="card">';
+    html+='<div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Letzte Einträge · '+maName(uf.ma)+' <span style="font-weight:400;color:#bbb">('+uf.ma+')</span></div>';
+    if(mEnt.length){
+      mEnt.forEach(function(e){
+        html+='<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f0f0ee;flex-wrap:wrap">';
+        html+='<span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span>';
+        html+='<span style="font-size:11px;flex:1">'+fmtD(e.von)+(e.bis&&e.bis!==e.von?' – '+fmtD(e.bis):'')+' ('+e.tage+'d)</span>';
+        html+='<span class="badge" style="'+genStyle(e.gen)+'">'+e.gen+'</span>';
+        html+='<button class="btn btn-sm" onclick="editEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 7px">✏</button>';
+        html+='<button class="btn btn-sm" onclick="delEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 7px;color:#A32D2D">✕</button>';
+        html+='</div>';
+      });
+    } else {html+='<div style="font-size:12px;color:#aaa">Keine Einträge</div>';}
+    html+='</div>';
+  } else {
+    html+='<div class="card" style="color:#aaa;font-size:12px;text-align:center;padding:20px">Wähle eine Person, um deren letzte Einträge zu sehen.</div>';
+  }
+  html+='</div></div>';
+  return html;
+}
+
+// Sortiert eine Kopie der Einträge nach dem gewählten Modus.
+// "Erfassung" nutzt die Eintrag-ID (E-0001, E-0002, …), da diese die Reihenfolge
+// widerspiegelt, in der die Einträge angelegt wurden.
+function idNum(id){var m=/(\d+)/.exec(id||'');return m?parseInt(m[1],10):0;}
+function sortEntries(entries,mode){
+  var arr=entries.slice();
+  switch(mode){
+    case 'von_asc': arr.sort(function(a,b){return a.von.localeCompare(b.von);}); break;
+    case 'name_asc': arr.sort(function(a,b){return maName(a.ma).localeCompare(maName(b.ma),'de')||a.von.localeCompare(b.von);}); break;
+    case 'name_desc': arr.sort(function(a,b){return maName(b.ma).localeCompare(maName(a.ma),'de')||b.von.localeCompare(a.von);}); break;
+    case 'erfassung_asc': arr.sort(function(a,b){return idNum(a.id)-idNum(b.id);}); break;
+    case 'erfassung_desc': arr.sort(function(a,b){return idNum(b.id)-idNum(a.id);}); break;
+    case 'von_desc': default: arr.sort(function(a,b){return b.von.localeCompare(a.von);}); break;
+  }
+  return arr;
+}
+function setSort(mode){D.sortMode=mode;renderContent();}
+
+// ─── EINSTELLUNGEN ────────────────────────────────────────────────────
+function viewEinstellungen(entries){
+  var ok=storageOK();
+  var raw='';
+  try{raw=localStorage.getItem(SK)||'';}catch(e){}
+  var kb=(new Blob([raw]).size/1024).toFixed(1);
+  var html='<div style="display:flex;gap:14px;flex-wrap:wrap">';
+  html+='<div class="card" style="flex:1;min-width:260px">';
+  html+='<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px">💾 Datenspeicher</div>';
+  html+='<div style="background:#ececea;border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:2">';
+  html+='<div>Storage: <strong style="color:'+(ok?'#085041':'#791F1F')+'">'+(ok?'✓ localStorage aktiv':'⚠ localStorage gesperrt')+'</strong></div>';
+  html+='<div>Schlüssel: <code style="background:#d8d8d5;padding:1px 5px;border-radius:3px;font-size:11px">'+SK+'</code></div>';
+  html+='<div>Daten: <strong>'+entries.length+' Einträge</strong> · '+kb+' KB</div>';
+  html+='</div>';
+  if(!ok){
+    html+='<div class="infobox">⚠ localStorage nicht verfügbar (Inkognito-Modus oder Browser-Einstellungen). Nutze JSON-Export zur Datensicherung.</div>';
+  }
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+  html+='<button class="btn btn-p btn-sm" onclick="exportJSON()">↓ Backup-JSON</button>';
+  html+='<button class="btn btn-sm" onclick="importJSON()">↑ JSON importieren</button>';
+  html+='<input type="file" id="imp-file" accept=".json" style="display:none" onchange="doImportFile(this)">';
+  html+='<button class="btn btn-sm" onclick="exportCSV()">↓ CSV (alle Einträge)</button>';
+  html+='<button class="btn btn-sm" onclick="if(confirm(\'Historische Einträge (244) hinzufügen? Bestehende Einträge bleiben, Duplikate werden übersprungen.\'))loadSeed()" style="background:#EAF3DE;color:#085041;border-color:#9FE1CB">📥 Historische Daten laden</button>';
+  html+='</div>';
+
+  // ── PERSONALABRECHNUNG-EXPORT ────────────────────────────────
+  var curMonth=today().slice(0,7);
+  html+='<hr style="border:none;border-top:1px solid #d8d8d5;margin:14px 0 12px">';
+  html+='<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📤 Personalabrechnung – monatlicher Export</div>';
+  html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:6px;padding:9px 11px;font-size:11px;color:#085041;margin-bottom:11px;line-height:1.5">';
+  html+='<strong>Hinweis:</strong> Die AU-Meldungen der Festangestellten werden monatlich an die Personalabrechnung übermittelt. Rückerstattung durch die Krankenkassen erfolgt ab dem <strong>1. Krankheitstag</strong>. Kalendertage und Arbeitstage werden im Export getrennt ausgewiesen.';
+  html+='</div>';
+  html+='<div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:10px">';
+  html+='<div style="min-width:160px"><label class="lbl">Abrechnungsmonat</label>';
+  html+='<input type="month" id="payroll-month" value="'+curMonth+'" style="width:100%"></div>';
+  html+='<button class="btn btn-sm" onclick="document.getElementById(\'payroll-month\').value=\'\'" style="height:34px">Alle Monate</button>';
+  html+='</div>';
+
+  // Vorschau-Zahlen für aktuellen Monat
+  var fAU=filterForPayroll('fest','au',curMonth).length;
+  var fUR=filterForPayroll('fest','urlaub',curMonth).length;
+  var sAU=filterForPayroll('sonst','au',curMonth).length;
+  var sUR=filterForPayroll('sonst','urlaub',curMonth).length;
+
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">';
+
+  // Festangestellte
+  html+='<div style="border:1px solid #d8d8d5;border-radius:8px;padding:10px 12px;background:#fff">';
+  html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:8px">Festangestellte Mitarbeitende</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  html+='<button class="btn btn-sm" onclick="exportPayrollCSV(\'fest\',\'au\')" style="justify-content:space-between;display:flex;align-items:center">';
+  html+='<span>↓ AU (Krank) CSV</span><span style="font-size:10px;color:#888">'+fAU+' im '+curMonth+'</span></button>';
+  html+='<button class="btn btn-sm" onclick="exportPayrollCSV(\'fest\',\'urlaub\')" style="justify-content:space-between;display:flex;align-items:center">';
+  html+='<span>↓ Urlaub CSV</span><span style="font-size:10px;color:#888">'+fUR+' im '+curMonth+'</span></button>';
+  html+='</div></div>';
+
+  // Sonstige MA
+  html+='<div style="border:1px solid #d8d8d5;border-radius:8px;padding:10px 12px;background:#fff">';
+  html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:8px">Sonstige MA (Außenarbeitsplätze)</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  html+='<button class="btn btn-sm" onclick="exportPayrollCSV(\'sonst\',\'au\')" style="justify-content:space-between;display:flex;align-items:center">';
+  html+='<span>↓ AU (Krank) CSV</span><span style="font-size:10px;color:#888">'+sAU+' im '+curMonth+'</span></button>';
+  html+='<button class="btn btn-sm" onclick="exportPayrollCSV(\'sonst\',\'urlaub\')" style="justify-content:space-between;display:flex;align-items:center">';
+  html+='<span>↓ Urlaub CSV</span><span style="font-size:10px;color:#888">'+sUR+' im '+curMonth+'</span></button>';
+  html+='</div></div>';
+
+  html+='</div>';
+  html+='<div style="margin-top:10px">';
+  html+='<button class="btn btn-p btn-sm" onclick="exportPayrollJSON()">↓ Kompletter Monat als strukturiertes JSON</button>';
+  html+='<span style="font-size:10px;color:#888;margin-left:8px">(alle 4 Bereiche in einer Datei)</span>';
+  html+='</div>';
+  html+='<div style="font-size:10px;color:#aaa;margin-top:8px;line-height:1.5">Die Vorschauzahlen beziehen sich auf den heutigen Monat. Wähle links einen anderen Monat, um für diesen zu exportieren. „Alle Monate" exportiert alle Einträge der jeweiligen Gruppe.</div>';
+  html+='<hr style="border:none;border-top:1px solid #d8d8d5;margin:10px 0">';
+  html+='<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📱 Android / Mobile</div>';
+  html+='<ol style="font-size:12px;padding-left:16px;line-height:2;color:#555">';
+  html+='<li>Diese HTML-Datei in OneDrive hochladen</li>';
+  html+='<li>OneDrive App auf Android → Datei → <em>Im Browser öffnen</em></li>';
+  html+='<li>Chrome: Menü (⋮) → <strong>Zum Startbildschirm hinzufügen</strong></li>';
+  html+='<li>Daten liegen im Chrome-localStorage dieser URL</li>';
+  html+='<li>Sync: JSON exportieren → OneDrive → auf Android importieren</li>';
+  html+='</ol>';
+  html+='</div>';
+  if(D.isHR){
+    html+='<div class="card" style="border-color:#E24B4A;min-width:200px;flex:0 0 auto">';
+    html+='<div style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:10px">⚠ HR-Aktionen</div>';
+    html+='<button class="btn btn-sm" onclick="if(confirm(\'Alle Einträge löschen?\'))clearAll()">Alle Einträge löschen</button>';
+    html+='<div style="font-size:11px;color:#aaa;margin-top:6px">Löscht alle Abwesenheiten. Stammdaten bleiben.</div>';
+    html+='<hr style="border:none;border-top:1px solid #d8d8d5;margin:10px 0">';
+    html+='<button class="btn btn-sm" onclick="hrLock()">HR-Modus beenden</button>';
+    html+='</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+// ─── ENTRY ACTIONS ────────────────────────────────────────────────────
+function ufSet(key,val){
+  D.uf[key]=val;
+  if(key==='von'&&(!D.uf.bis||D.uf.bis<val))D.uf.bis=val;
+  renderContent();
+}
+function esc(s){return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function saveEntry(){
+  var uf=D.uf;
+  if(!uf.ma){flash('Bitte MA_ID auswählen.','err');return;}
+  if(!uf.von){flash('Bitte Von-Datum angeben.','err');return;}
+  var tage=netDays(uf.von,uf.bis||uf.von);
+  var brauchtGen=ART_GEN.indexOf(uf.art)>=0;
+  var gen=brauchtGen?uf.gen:'–';
+  if(D.editId){
+    var idx=D.entries.findIndex(function(e){return e.id===D.editId;});
+    if(idx>-1){
+      var prev=D.entries[idx];
+      D.entries[idx]={id:D.editId,ma:uf.ma,art:uf.art,von:uf.von,bis:uf.bis||uf.von,tage:tage,gen:gen,kom:uf.kom,erfasstAm:prev.erfasstAm||''};
+    }
+    flash('Eintrag '+D.editId+' aktualisiert ✓','ok');
+    D.editId=null;
+  } else {
+    var id=newId();
+    D.entries.push({id:id,ma:uf.ma,art:uf.art,von:uf.von,bis:uf.bis||uf.von,tage:tage,gen:gen,kom:uf.kom,erfasstAm:new Date().toISOString()});
+    flash('Gespeichert · '+id+' ('+tage+' Arbeitstage)','ok');
+  }
+  D.uf={ma:uf.ma,art:uf.art,von:'',bis:'',gen:'Ausstehend',kom:''};
+  dbSave();
+  renderNav();
+  renderContent();
+}
+
+function editEntry(id){
+  var e=D.entries.find(function(x){return x.id===id;});
+  if(!e)return;
+  D.uf={ma:e.ma,art:e.art,von:e.von,bis:e.bis,gen:e.gen,kom:e.kom||''};
+  D.editId=id;
+  G.view('eingabe');
+}
+function cancelEdit(){D.editId=null;D.uf={ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''};renderContent();}
+
+function delEntry(id){
+  if(!confirm('Eintrag '+id+' löschen?'))return;
+  D.entries=D.entries.filter(function(e){return e.id!==id;});
+  flash('Eintrag '+id+' gelöscht');
+  dbSave();renderNav();renderContent();
+}
+
+function approve(id){
+  var e=D.entries.find(function(x){return x.id===id;});
+  if(e){e.gen='Ja';dbSave();flash('Genehmigt: '+id,'ok');renderNav();renderContent();}
+}
+function deny(id){
+  var e=D.entries.find(function(x){return x.id===id;});
+  if(e){e.gen='Nein';dbSave();flash('Abgelehnt: '+id);renderNav();renderContent();}
+}
+function clearAll(){D.entries=[];D.nid=1;dbSave();flash('Alle Einträge gelöscht');renderNav();renderContent();}
+
+// Historische Daten (SEED) manuell (nach)laden – hängt Einträge an, überspringt Duplikate anhand id/ma/von/art
+function loadSeed(){
+  if(!Array.isArray(SEED)||SEED.length===0){flash('Keine SEED-Daten vorhanden','err');return;}
+  var have={};
+  D.entries.forEach(function(e){have[e.ma+'|'+e.von+'|'+e.bis+'|'+e.art]=true;});
+  var maxId=D.entries.reduce(function(m,e){return Math.max(m,idNum(e.id));},0);
+  var added=0,skipped=0;
+  SEED.forEach(function(s){
+    var k=s.ma+'|'+s.von+'|'+s.bis+'|'+s.art;
+    if(have[k]){skipped++;return;}
+    maxId++;
+    D.entries.push({id:'E-'+String(maxId).padStart(4,'0'),ma:s.ma,art:s.art,von:s.von,bis:s.bis,tage:s.tage,gen:s.gen,kom:s.kom});
+    have[k]=true; added++;
+  });
+  D.nid=Math.max(D.nid,maxId+1);
+  dbSave();
+  flash('Historische Daten geladen: '+added+' neu, '+skipped+' übersprungen','ok');
+  renderNav();renderContent();
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+if(sessionStorage.getItem('geteq-ok')==='1'){
+  if(sessionStorage.getItem('geteq-hr')==='1')D.isHR=true;
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  dbLoad();
+  render();
+} else {
+  document.getElementById('lpw').focus();
+}
+</script>
+</body>
+</html>
