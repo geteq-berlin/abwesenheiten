@@ -171,24 +171,12 @@ function initMSAL() {
   return Promise.resolve();
 }
 
-async function doMSLogin() {
+function doMSLogin() {
   var btn = document.getElementById('ms-btn');
-  var err = document.getElementById('lerr');
   btn.disabled = true;
-  btn.textContent = 'Anmelden …';
-  err.textContent = '';
-  try {
-    await msalInstance.loginPopup({ scopes: CFG.scopes });
-    var accounts = msalInstance.getAllAccounts();
-    if (accounts.length === 0) throw new Error('Kein Konto gefunden');
-    currentUser  = accounts[0];
-    cloudEnabled = true;
-    await bootApp();
-  } catch(e) {
-    err.textContent = 'Fehler: ' + (e.message||e);
-    btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" fill="none" style="width:20px;height:20px"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>Mit Microsoft anmelden';
-  }
+  btn.textContent = 'Weiterleitung zu Microsoft …';
+  // Redirect-Flow: ganze Seite geht zu Microsoft und kommt zurueck
+  msalInstance.loginRedirect({ scopes: CFG.scopes });
 }
 
 function offlineMode() {
@@ -214,16 +202,16 @@ async function getToken() {
     var resp = await msalInstance.acquireTokenSilent({ scopes: CFG.scopes, account: currentUser });
     return resp.accessToken;
   } catch(e) {
-    try {
-      var resp2 = await msalInstance.acquireTokenPopup({ scopes: CFG.scopes });
-      return resp2.accessToken;
-    } catch(e2) { cloudEnabled = false; return null; }
+    // Token abgelaufen: Redirect zur Neuanmeldung
+    try { msalInstance.acquireTokenRedirect({ scopes: CFG.scopes, account: currentUser }); } catch(e2) {}
+    cloudEnabled = false;
+    return null;
   }
 }
 
 function doLogout() {
   if (cloudEnabled && msalInstance) {
-    msalInstance.logoutPopup().then(function(){ location.reload(); }).catch(function(){ location.reload(); });
+    msalInstance.logoutRedirect().catch(function(){ location.reload(); });
   } else { location.reload(); }
 }
 
@@ -710,9 +698,16 @@ function exportCSV(){var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbei
 //  START
 // ═══════════════════════════════════════════════════════
 initMSAL().then(async function(){
-  // MSAL v2: redirect response verarbeiten
-  try { await msalInstance.handleRedirectPromise(); } catch(e) {}
-  // Versuche stillen Login
+  // Redirect-Antwort verarbeiten (nach Rueckkehr von Microsoft)
+  var redirectResult = null;
+  try { redirectResult = await msalInstance.handleRedirectPromise(); } catch(e) { console.warn('Redirect error:', e); }
+  if (redirectResult && redirectResult.account) {
+    currentUser  = redirectResult.account;
+    cloudEnabled = true;
+    await bootApp();
+    return;
+  }
+  // Stiller Login (Session vorhanden)
   var ok = await silentLogin();
   if(ok){
     await bootApp();
