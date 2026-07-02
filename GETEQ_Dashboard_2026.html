@@ -1,0 +1,958 @@
+<!-- ═══════════════════════════════════════════════════
+  GETEQ Abwesenheitsdashboard · VERSION 3.0 · Stand 02.07.2026
+  v3.0: AU als eigene Art · Klarnamen in allen Ansichten · Übersicht: Art ändern/löschen
+        Urlaubskonto: Monatsdetail pro MA · AAG-AU-Report (Fest/Extern) · Versionsanzeige · grauer Hintergrund
+  Ab Freigabe durch GF: FINAL – inhaltliche Änderungen nur auf Anforderung.
+═══════════════════════════════════════════════════ -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A2E5A">
+<title>GETEQ – Abwesenheitsmanagement 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#1A2E5A;--blue:#0C447C;--accent:#E5820A;--ok:#085041;--warn:#633806;--err:#791F1F;
+  --ok-bg:#EAF3DE;--warn-bg:#FAEEDA;--err-bg:#FCEBEB;--info-bg:#E6F1FB;
+  --bg:#e8e8e5;--srf:#fff;--bdr:#e2e8f0;--tx:#1a1a1a;--tx2:#888;--tx3:#555;
+  --font:Calibri,'Segoe UI',Arial,sans-serif}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh;-webkit-tap-highlight-color:transparent}
+
+/* LOGIN */
+#login{position:fixed;inset:0;z-index:9999;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-direction:column}
+#login-box{background:#fff;border-radius:14px;padding:36px 32px;width:320px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.45)}
+#ms-btn{width:100%;padding:11px;font-size:14px;font-weight:600;border:none;border-radius:8px;
+  background:#0078D4;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit}
+#ms-btn:hover{background:#006CBE}
+#ms-btn svg{width:20px;height:20px;flex-shrink:0}
+#lerr{color:#E24B4A;font-size:12px;margin-top:10px;min-height:18px}
+.login-hint{font-size:11px;color:#aaa;margin-top:14px;line-height:1.5}
+.offline-link{font-size:11px;color:#B5D4F4;margin-top:10px;cursor:pointer;text-decoration:underline}
+
+/* APP */
+#app{max-width:1080px;margin:0 auto;padding:14px;padding-bottom:80px;display:none}
+.hdr{background:var(--navy);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0;flex-wrap:wrap;gap:6px}
+.hdr-l{color:#fff;font-weight:500;font-size:14px}
+.hdr-l em{opacity:.55;font-size:11px;margin-left:8px;font-style:normal}
+.hdr-r{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hbtn{font-size:11px;padding:4px 10px;border-radius:5px;background:rgba(255,255,255,.12);color:#B5D4F4;border:1px solid rgba(255,255,255,.2);cursor:pointer;font-family:inherit}
+.hbtn:hover{background:rgba(255,255,255,.2)}
+.hr-badge{font-size:10px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:10px;font-weight:500}
+.sync-dot{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:5px;background:rgba(255,255,255,.1);color:#B5D4F4;white-space:nowrap}
+.sync-dot.ok{background:rgba(8,80,65,.5);color:#9FE1CB}
+.sync-dot.err{background:rgba(121,31,31,.5);color:#F8A3A3}
+.sync-dot.spin{background:rgba(12,68,124,.4);color:#B5D4F4}
+.sync-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;display:block;flex-shrink:0}
+.sync-dot.spin::before{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.user-chip{font-size:11px;color:rgba(181,212,244,.7);white-space:nowrap}
+
+/* NAV */
+.nav-bar{background:var(--bg);border:1px solid var(--bdr);border-top:none;display:flex;overflow-x:auto;scrollbar-width:none}
+.nav-bar::-webkit-scrollbar{display:none}
+.ntab{padding:9px 14px;border:none;border-bottom:2.5px solid transparent;border-radius:0;background:transparent;font-size:12px;font-weight:400;color:var(--tx2);cursor:pointer;white-space:nowrap;font-family:inherit}
+.ntab.on{border-bottom-color:var(--navy);font-weight:500;color:var(--navy)}
+.ntab:hover{background:#f0f0ee}
+.nbadge{background:#E24B4A;color:#fff;border-radius:9px;padding:1px 5px;font-size:9px;margin-left:3px}
+
+/* CONTENT */
+#content{background:#fff;border:1px solid var(--bdr);border-top:none;border-radius:0 0 8px 8px;padding:14px}
+.toast{padding:7px 14px;font-size:12px;border-radius:5px;margin-bottom:12px;display:none}
+.toast.show{display:block}
+.toast.ok{background:var(--ok-bg);border:1px solid #9FE1CB;color:var(--ok)}
+.toast.warn{background:var(--warn-bg);border:1px solid #EF9F27;color:var(--warn)}
+.toast.err{background:var(--err-bg);border:1px solid #F09595;color:var(--err)}
+.card{background:#fff;border:1px solid var(--bdr);border-radius:8px;padding:12px 14px}
+.row{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+.row>div{flex:1;min-width:120px}
+.lbl{font-size:11px;color:var(--tx2);display:block;margin-bottom:3px}
+select,input[type=text],input[type=date],input[type=number]{width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:inherit;background:#fff;color:var(--tx)}
+select:focus,input:focus{outline:2px solid var(--navy);outline-offset:1px;border-color:var(--navy)}
+button{font-family:inherit;cursor:pointer;font-size:13px}
+.btn{padding:7px 14px;border-radius:6px;border:1px solid var(--bdr);background:#fff;color:var(--tx)}
+.btn:hover:not(:disabled){background:#f0f0ee}
+.btn-p{background:var(--navy);color:#fff;border:none}.btn-p:hover{background:#0e1f3d}
+.btn-ok{background:var(--ok);color:#fff;border:none}.btn-ok:hover{opacity:.9}
+.btn-err{background:#A32D2D;color:#fff;border:none}.btn-err:hover{opacity:.9}
+.btn-sm{padding:4px 10px;font-size:11px}
+button:disabled{opacity:.4;cursor:default}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;color:var(--tx2);font-weight:500;padding:5px 8px;text-align:left;border-bottom:1px solid var(--bdr)}
+td{padding:6px 8px;border-bottom:1px solid #f0f0ee;font-size:12px;vertical-align:middle}
+tr:nth-child(even)>td{background:#fafaf8}
+tr:hover>td{background:#f5f3ee}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;white-space:nowrap}
+.stat{background:var(--bg);border-radius:8px;padding:10px 12px;flex:1;min-width:110px}
+.pbar-bg{flex:1;height:8px;background:var(--bdr);border-radius:4px;overflow:hidden;min-width:70px}
+.pbar{height:8px;border-radius:4px}
+.wk-outer{border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.wk-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+.wk-nav button{font-size:11px;padding:4px 10px;background:var(--bg);border:1px solid var(--bdr);color:var(--tx3);border-radius:5px}
+.wk-head{text-align:center;font-size:10px;font-weight:600;color:var(--tx2);padding:4px 2px}
+.wk-head.today{color:var(--blue);background:var(--info-bg);border-radius:5px}
+.wk-name{font-size:11px;padding:5px 6px;display:flex;flex-direction:column;color:var(--tx3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-cell{border-radius:5px;padding:4px 2px;text-align:center;font-size:9px;font-weight:600;cursor:default}
+.wk-url{background:var(--info-bg);color:var(--blue)}.wk-ab{background:var(--warn-bg);color:var(--warn)}
+.wk-fort{background:#FAECE7;color:#712B13}.wk-son{background:#EEEDFE;color:#3C3489}
+.wk-bild{background:var(--ok-bg);color:var(--ok)}.wk-frei{background:#FBEAF0;color:#72243E}
+.wk-krank{background:#FCEBEB;color:#791F1F}
+.wk-empty{background:#f5f5f3}.wk-empty.today{background:#EEF6FF}.wk-holiday{background:#f0f0ee;color:#aaa}
+.wk-legend{margin-top:10px;padding-top:8px;border-top:1px solid #f0f0ee;font-size:10px;color:#bbb;display:flex;gap:8px;flex-wrap:wrap}
+.wk-pill{padding:1px 6px;border-radius:3px;font-weight:600}
+.infobox{background:var(--warn-bg);border:1px solid #EF9F27;border-radius:6px;padding:8px 10px;font-size:11px;color:var(--warn);line-height:1.5;margin-bottom:9px}
+.hr-locked{text-align:center;background:#fafaf8;border:2px dashed var(--bdr);border-radius:10px;padding:30px 20px}
+@media(max-width:600px){#app{padding:10px;padding-bottom:70px}.row{flex-direction:column}.row>div{min-width:0}.hdr-r .hbtn:not(.sync-dot){display:none}.wk-name{font-size:9px}}
+.fab{position:fixed;bottom:18px;right:18px;width:50px;height:50px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:22px;box-shadow:0 4px 16px rgba(229,130,10,.4);z-index:80;display:none;align-items:center;justify-content:center;cursor:pointer}
+@media(max-width:600px){.fab{display:flex}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN / MICROSOFT -->
+<div id="login">
+  <div style="color:#B5D4F4;font-size:11px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;opacity:.7">Abwesenheitsmanagement</div>
+  <div id="login-box">
+    <div style="font-size:28px;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:4px">GETEQ</div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:24px">Mit Microsoft-Konto anmelden</div>
+    <button id="ms-btn" onclick="doMSLogin()">
+      <svg viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" fill="none">
+        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+      </svg>
+      Mit Microsoft anmelden
+    </button>
+    <div id="lerr"></div>
+    <div class="login-hint">Melde dich mit deiner @geteq.org Adresse an.<br>Beim ersten Mal erscheint ein Microsoft-Popup.</div>
+    <div class="offline-link" onclick="offlineMode()">Offline-Modus (kein Sync)</div>
+  </div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.0</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="hdr-wrap"></div>
+  <div id="toast" class="toast"></div>
+  <div class="nav-bar" id="nav-bar"></div>
+  <div id="content"></div>
+</div>
+
+<button class="fab" onclick="G.view('eingabe')" title="Neue Meldung">+</button>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  AZURE / GRAPH KONFIGURATION
+// ═══════════════════════════════════════════════════════
+var CFG = {
+  clientId:    '63430439-3fc0-464c-bc98-e4ebe59dbd73',
+  tenantId:    'ac04c9b0-c539-4946-9abd-5366742dfd87',
+  redirectUri: 'https://geteq-berlin.github.io/abwesenheiten/GETEQ_Dashboard_2026.html',
+  driveId:     'b!Rv4J6icvtkecf4p-r-5JscQFBhRoToVKjC5jZGBgOCl6aJCjD4aARoH5bHOqc4Ka',
+  dataPath:    'Abwesenheiten/GETEQ_Daten.json',
+  scopes:      ['Files.ReadWrite.All','Sites.ReadWrite.All','User.Read']
+};
+
+var msalInstance = null;
+var currentUser  = null;
+var cloudEnabled = false;
+var saveDebounce = null;
+
+// ─── MSAL INIT ────────────────────────────────────────
+function initMSAL() {
+  if (typeof msal === 'undefined') {
+    document.getElementById('lerr').textContent = 'Fehler: MSAL nicht geladen. Bitte F5 drücken.';
+    return Promise.reject(new Error('MSAL not loaded'));
+  }
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId:    CFG.clientId,
+      authority:   'https://login.microsoftonline.com/' + CFG.tenantId,
+      redirectUri: CFG.redirectUri
+    },
+    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
+  });
+  return Promise.resolve();
+}
+
+function doMSLogin() {
+  var btn = document.getElementById('ms-btn');
+  btn.disabled = true;
+  btn.textContent = 'Weiterleitung zu Microsoft …';
+  // Redirect-Flow: ganze Seite geht zu Microsoft und kommt zurueck
+  msalInstance.loginRedirect({ scopes: CFG.scopes });
+}
+
+function offlineMode() {
+  cloudEnabled = false;
+  currentUser  = null;
+  bootApp();
+}
+
+async function silentLogin() {
+  var accounts = msalInstance.getAllAccounts();
+  if (accounts.length === 0) return false;
+  currentUser = accounts[0];
+  try {
+    await msalInstance.acquireTokenSilent({ scopes: CFG.scopes, account: currentUser });
+    cloudEnabled = true;
+    return true;
+  } catch(e) { return false; }
+}
+
+async function getToken() {
+  if (!cloudEnabled || !currentUser) return null;
+  try {
+    var resp = await msalInstance.acquireTokenSilent({ scopes: CFG.scopes, account: currentUser });
+    return resp.accessToken;
+  } catch(e) {
+    // Token abgelaufen: Redirect zur Neuanmeldung
+    try { msalInstance.acquireTokenRedirect({ scopes: CFG.scopes, account: currentUser }); } catch(e2) {}
+    cloudEnabled = false;
+    return null;
+  }
+}
+
+function doLogout() {
+  if (cloudEnabled && msalInstance) {
+    msalInstance.logoutRedirect().catch(function(){ location.reload(); });
+  } else { location.reload(); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GRAPH API – CLOUD SYNC
+// ═══════════════════════════════════════════════════════
+var GRAPH = 'https://graph.microsoft.com/v1.0';
+
+async function cloudLoad() {
+  var token = await getToken();
+  if (!token) return null;
+  var url = GRAPH+'/drives/'+CFG.driveId+'/root:/'+encodeURIComponent(CFG.dataPath).replace(/%2F/g,'/')+':/content';
+  try {
+    var res = await fetch(url, { headers: { Authorization: 'Bearer '+token } });
+    if (res.status === 404) return null;  // Datei existiert noch nicht
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  } catch(e) {
+    console.warn('Cloud load error:', e);
+    return null;
+  }
+}
+
+async function cloudSave(data) {
+  var token = await getToken();
+  if (!token) { setSyncStatus('err','⚠ Kein Token'); return false; }
+  var url = GRAPH+'/drives/'+CFG.driveId+'/root:/'+encodeURIComponent(CFG.dataPath).replace(/%2F/g,'/')+':/content';
+  try {
+    setSyncStatus('spin','Speichern …');
+    var res = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    setSyncStatus('ok','☁ Cloud gespeichert');
+    return true;
+  } catch(e) {
+    setSyncStatus('err','⚠ Cloud-Fehler: '+e.message);
+    return false;
+  }
+}
+
+// Merge-Logik: lokale und Cloud-Daten zusammenführen
+function mergeData(local, cloud) {
+  if (!cloud) return local;
+  if (!local || !local.entries || local.entries.length === 0) return cloud;
+  // Cloud-Einträge als Map
+  var cloudMap = {};
+  (cloud.entries||[]).forEach(function(e){ cloudMap[e.id]=e; });
+  // Lokale Einträge die NICHT in Cloud sind → hinzufügen
+  var merged = (cloud.entries||[]).slice();
+  (local.entries||[]).forEach(function(e){
+    if (!cloudMap[e.id]) merged.push(e);
+  });
+  return {
+    entries: merged,
+    nid: Math.max(local.nid||1, cloud.nid||1),
+    namen: Object.assign({}, local.namen||{}, cloud.namen||{}),
+    meta: cloud.meta,
+    ts: new Date().toISOString()
+  };
+}
+
+function triggerSave() {
+  clearTimeout(saveDebounce);
+  saveDebounce = setTimeout(async function(){
+    var payload = { entries: D.entries, nid: D.nid, namen: D.namen, ts: new Date().toISOString() };
+    // Immer lokal speichern
+    try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify(payload)); } catch(e) {}
+    // Cloud wenn verfügbar
+    if (cloudEnabled) {
+      await cloudSave(payload);
+    } else {
+      setSyncStatus('err','Offline – nur lokal');
+    }
+  }, 1200);
+}
+
+function setSyncStatus(type, txt) {
+  var el = document.getElementById('sync-status');
+  if (!el) return;
+  el.className = 'sync-dot ' + (type||'');
+  el.textContent = txt;
+  if (type === 'ok') {
+    clearTimeout(setSyncStatus._t);
+    setSyncStatus._t = setTimeout(function(){
+      if (el) { el.className='sync-dot'; el.textContent=cloudEnabled?'☁ Verbunden':'Offline'; }
+    }, 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  STAMMDATEN & KONSTANTEN
+// ═══════════════════════════════════════════════════════
+var PIN_HR = '2000';
+var NAVY   = '#1A2E5A';
+var VERSION = '3.0';
+
+var FEIERTAGE = {
+  '2026-01-01':'Neujahr','2026-03-08':'Internationaler Frauentag',
+  '2026-04-03':'Karfreitag','2026-04-06':'Ostermontag',
+  '2026-05-01':'Tag der Arbeit','2026-05-14':'Christi Himmelfahrt',
+  '2026-05-25':'Pfingstmontag','2026-10-03':'Tag der Deutschen Einheit',
+  '2026-12-25':'1. Weihnachtstag','2026-12-26':'2. Weihnachtstag'
+};
+
+var ART_ALL = ['Urlaub','AU','Bildungsurlaub','Sonderurlaub','Fortbildung','Abwesenheit','Freistellung','Elternzeit','Sonstiges'];
+var ART_GEN = ['Urlaub','Bildungsurlaub','Sonderurlaub'];
+
+var STAMM = [
+  {id:'MA-016',f:'Geschäftsführung',         wh:40,ju:30,b:30,ue:0,c:'GF-01',on:true},
+  {id:'MA-020',f:'Stellv. Geschäftsführung', wh:35,ju:36,b:30,ue:6,c:'GF-02',on:true},
+  {id:'MA-022',f:'Verwaltung',               wh:30,ju:32,b:30,ue:2,c:'VW-01',on:true},
+  {id:'MA-IT1',f:'IT-Support',               wh:30,ju:35,b:35,ue:0,c:'IT-01', on:true},
+  {id:'MA-003',f:'Koordinatorin',            wh:35,ju:30,b:30,ue:0,c:'KO-01',on:true},
+  {id:'MA-019',f:'Koordinator',              wh:20,ju:30,b:30,ue:0,c:'KO-02',on:true},
+  {id:'MA-026',f:'Schulungskoordinatorin',   wh:35,ju:30,b:30,ue:0,c:'KO-03',on:true},
+  {id:'MA-035',f:'Koordinatorin',            wh:30,ju:15,b:15,ue:0,c:'KO-04',on:true},
+  {id:'MA-034',f:'Koordinatorin',            wh:30,ju:30,b:30,ue:0,c:'KO-05',on:true},
+  {id:'MA-002',f:'Evaluator',                wh:25,ju:35,b:35,ue:0,c:'EV-01',on:true},
+  {id:'MA-004',f:'Evaluator',                wh:30,ju:35,b:35,ue:0,c:'EV-02',on:true},
+  {id:'MA-032',f:'Evaluator',                wh:20,ju:35,b:35,ue:0,c:'EV-03',on:true},
+  {id:'MA-025',f:'Evaluatorin',              wh:20,ju:35,b:35,ue:0,c:'EV-04',on:true},
+  {id:'MA-007',f:'Evaluator',                wh:20,ju:35,b:35,ue:0,c:'EV-05',on:true},
+  {id:'MA-011',f:'Evaluator',                wh:30,ju:35,b:35,ue:0,c:'EV-06',on:true},
+  {id:'MA-033',f:'Evaluator',                wh:20,ju:35,b:35,ue:0,c:'EV-07',on:true},
+  {id:'MA-029',f:'Hilfskraft',               wh:18,ju:18,b:18,ue:0,c:'HK-01',on:true},
+  {id:'MA-A111',f:'Evaluator (extern)',       wh:0, ju:35,b:35,ue:0,c:'AE-01',on:true},
+  {id:'MA-A112',f:'Evaluator (extern)',       wh:25,ju:35,b:35,ue:0,c:'AE-02',on:true},
+  {id:'MA-A104',f:'Evaluatorin (extern)',     wh:20,ju:24,b:24,ue:0,c:'AE-03',on:true},
+  {id:'MA-A106',f:'Evaluatorin (extern)',     wh:20,ju:30,b:30,ue:0,c:'AE-04',on:true},
+  {id:'MA-A114',f:'Evaluatorin (extern)',     wh:12,ju:24,b:24,ue:0,c:'AE-05',on:true},
+  {id:'MA-A102',f:'Evaluator (extern)',       wh:20,ju:30,b:30,ue:0,c:'AE-06',on:true},
+  {id:'MA-A101',f:'Evaluator (extern)',       wh:20,ju:16,b:16,ue:0,c:'AE-07',on:true},
+  {id:'MA-030',f:'Koordination',             wh:0,ju:0,b:0,ue:0,c:'KO-06',on:false},
+  {id:'MA-031',f:'Koordinatorin',            wh:0,ju:0,b:0,ue:0,c:'KO-07',on:false},
+  {id:'MA-A115',f:'Evaluator (extern)',       wh:0,ju:0,b:0,ue:0,c:'AE-08',on:false},
+];
+
+// ═══════════════════════════════════════════════════════
+//  APP-ZUSTAND
+// ═══════════════════════════════════════════════════════
+var D = {entries:[], nid:1, namen:{}, isHR:false, weekOff:0, view:'uebersicht', tab:'url',
+  fl:{ma:'',art:'',gen:''}, kf:{ma:'',von:'',bis:'',kom:''}, showPast:false, km:{ma:'',mon:new Date().getMonth()},
+  uf:{ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''}, editId:null};
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+async function bootApp() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display   = 'block';
+
+  setSyncStatus('spin','Lade Daten …');
+
+  // 1. Lokalen Cache laden
+  var local = null;
+  try {
+    var raw = localStorage.getItem('geteq-ab-2026-v2');
+    if (raw) local = JSON.parse(raw);
+  } catch(e) {}
+
+  // 2. Cloud laden wenn verfügbar
+  var cloud = null;
+  if (cloudEnabled) {
+    cloud = await cloudLoad();
+  }
+
+  // 3. Mergen
+  var merged = mergeData(local, cloud);
+  if (merged) {
+    D.entries = merged.entries || [];
+    D.nid     = merged.nid || 1;
+    D.namen   = merged.namen || {};
+  }
+
+  // 4. Falls Cloud-Stand neuer als lokal → lokal aktualisieren
+  if (cloud) {
+    try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify({entries:D.entries,nid:D.nid,ts:new Date().toISOString()})); } catch(e) {}
+  }
+
+  // HR via sessionStorage
+  if (sessionStorage.getItem('geteq-hr')==='1') D.isHR = true;
+
+  setSyncStatus(cloudEnabled?'ok':'err', cloudEnabled?'☁ Verbunden':'Offline');
+
+  render();
+}
+
+// ═══════════════════════════════════════════════════════
+//  HILFSFUNKTIONEN
+// ═══════════════════════════════════════════════════════
+function dISO(d){return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());}
+function z(n){return String(n).padStart(2,'0');}
+function today(){return dISO(new Date());}
+function fmtD(s){if(!s)return'–';var p=s.split('-');return p[2]+'.'+p[1]+'.'+p[0];}
+function isoWeek(d){var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));var dn=dt.getUTCDay()||7;dt.setUTCDate(dt.getUTCDate()+4-dn);var y0=new Date(Date.UTC(dt.getUTCFullYear(),0,1));return Math.ceil(((dt-y0)/864e5+1)/7);}
+function weekDays(d){var day=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));var r=[];for(var i=0;i<5;i++){var x=new Date(mon);x.setDate(mon.getDate()+i);r.push(x);}return r;}
+function netDays(a,b){if(!a||!b)return 0;var s=new Date(a),e=new Date(b),n=0,d=new Date(s);if(s>e)return 0;while(d<=e){var ds=dISO(d);if(d.getDay()>0&&d.getDay()<6&&!FEIERTAGE[ds])n++;d.setDate(d.getDate()+1);}return n;}
+function getMa(id){return STAMM.find(function(m){return m.id===id;})||{f:'–',c:'–',ju:0,b:0,ue:0};}
+function getName(id){return D.namen[id]||id;}
+function artStyle(art){if(art==='Urlaub')return 'background:#E6F1FB;color:#0C447C';if(art==='AU')return 'background:#FCEBEB;color:#791F1F';if(art==='Bildungsurlaub')return 'background:#D1FAE5;color:#065F46';if(art==='Abwesenheit')return 'background:#FAEEDA;color:#633806';if(art==='Fortbildung')return 'background:#FAECE7;color:#712B13';if(art==='Sonderurlaub')return 'background:#EEEDFE;color:#3C3489';if(art==='Freistellung')return 'background:#FBEAF0;color:#72243E';return 'background:#f1efe8;color:#5f5e5a';}
+function artClass(art){if(art==='Urlaub')return 'wk-url';if(art==='AU')return 'wk-krank';if(art==='Abwesenheit')return 'wk-ab';if(art==='Fortbildung')return 'wk-fort';if(art==='Sonderurlaub'||art==='Freistellung')return 'wk-son';if(art==='Bildungsurlaub')return 'wk-bild';return 'wk-son';}
+function genStyle(g){if(g==='Ja')return 'background:#EAF3DE;color:#085041';if(g==='Nein')return 'background:#FCEBEB;color:#791F1F';return 'background:#f1efe8;color:#888';}
+
+// ═══════════════════════════════════════════════════════
+//  NAVIGATION & RENDER
+// ═══════════════════════════════════════════════════════
+var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['liste','📋 Einträge'],['eingabe','+ Neue Meldung'],['stamm','👥 Stammdaten'],['einst','⚙ Einstellungen']];
+
+var G={
+  view:function(name){D.view=name;renderNav();renderContent();window.scrollTo({top:0,behavior:'smooth'});},
+  weekOff:function(n){D.weekOff=n;renderContent();}
+};
+
+function flash(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+(type||'ok');clearTimeout(flash._t);flash._t=setTimeout(function(){t.className='toast';},2800);}
+function render(){renderHeader();renderNav();renderContent();}
+
+function renderHeader(){
+  var d=new Date().toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  var userName = currentUser ? currentUser.name||currentUser.username : 'Offline';
+  document.getElementById('hdr-wrap').innerHTML=
+    '<div class="hdr">'+
+    '<div class="hdr-l">GETEQ <em>Abwesenheitsmanagement 2026 &middot; v'+VERSION+'</em></div>'+
+    '<div class="hdr-r">'+
+    '<span id="sync-status" class="sync-dot '+(cloudEnabled?'ok':'err')+'">'+(cloudEnabled?'☁ Verbunden':'Offline')+'</span>'+
+    '<span class="user-chip">'+userName+'</span>'+
+    (D.isHR?'<span class="hr-badge">HR aktiv</span>':'<button class="hbtn" onclick="hrUnlock()">HR-Modus</button>')+
+    '<button class="hbtn" onclick="exportCSV()">↓ CSV</button>'+
+    '<button class="hbtn" onclick="exportJSON()">↓ JSON</button>'+
+    '<button class="hbtn" onclick="doLogout()">⏏</button>'+
+    '<span style="color:#B5D4F4;font-size:11px">'+d+'</span>'+
+    '</div></div>';
+}
+
+function renderNav(){
+  var offen=D.entries.filter(function(e){return e.gen==='Ausstehend';}).length;
+  var html='';
+  VIEWS.forEach(function(v){
+    var act=D.view===v[0];
+    html+='<button class="ntab'+(act?' on':'')+'" onclick="G.view(\''+v[0]+'\')">'+v[1];
+    if(v[0]==='eingabe'&&offen>0)html+='<span class="nbadge">'+offen+'</span>';
+    html+='</button>';
+  });
+  var el=document.getElementById('nav-bar');
+  if(el)el.innerHTML=html;
+}
+
+function renderContent(){
+  var t=today(),entries=D.entries;
+  var html='';
+  if(D.view==='uebersicht')html=viewUebersicht(entries,t);
+  else if(D.view==='woche')html=viewWoche(entries,t);
+  else if(D.view==='konto')html=viewKonto(entries,t);
+  else if(D.view==='eingabe')html=viewEingabe(entries,t);
+  else if(D.view==='liste')html=viewListe(entries,t);
+  else if(D.view==='stamm')html=viewStammdaten();
+  else if(D.view==='einst')html=viewEinstellungen(entries);
+  document.getElementById('content').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════════════════════
+function viewUebersicht(entries,t){
+  var abwH=entries.filter(function(e){return e.gen!=='Nein'&&e.von<=t&&(e.bis||e.von)>=t;});
+  var offen=entries.filter(function(e){return e.gen==='Ausstehend';});
+  var baseD=new Date(Date.now()+D.weekOff*604800000);
+  var wkD=weekDays(baseD);
+  var wkStart=dISO(wkD[0]),wkEnd=dISO(wkD[4]);
+  var html='';
+  if(D.isHR&&offen.length>0){
+    html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px;padding:10px 12px;margin-bottom:12px">';
+    html+='<div style="font-size:12px;font-weight:500;color:#085041;margin-bottom:8px">⏳ Offene Genehmigungen ('+offen.length+')</div>';
+    offen.forEach(function(e){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(159,225,203,.5);flex-wrap:wrap">';
+      html+='<span style="flex:1;font-size:12px"><strong>'+getName(e.ma)+'</strong> · '+getMa(e.ma).f+' · '+fmtD(e.von)+(e.bis&&e.bis!==e.von?' – '+fmtD(e.bis):'')+' · '+e.tage+' Tage</span>';
+      html+='<button class="btn btn-ok btn-sm" onclick="approve(\''+e.id+'\')">Genehmigen</button>';
+      html+='<button class="btn btn-err btn-sm" onclick="deny(\''+e.id+'\')">Ablehnen</button>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  [{l:'Heute abwesend',v:abwH.length,sub:abwH.length?abwH.slice(0,3).map(function(e){return getName(e.ma);}).join(', '):'–',c:abwH.length?'#0C447C':undefined},
+   {l:'Offene Anträge',v:offen.length,sub:'ausstehend',c:offen.length?'#633806':undefined},
+   {l:'Einträge gesamt',v:entries.length,sub:STAMM.filter(function(m){return m.on;}).length+' MA aktiv'}
+  ].forEach(function(x){
+    html+='<div class="stat"><div style="font-size:11px;color:#888;margin-bottom:3px">'+x.l+'</div>';
+    html+='<div style="font-size:22px;font-weight:500;line-height:1.1;color:'+(x.c||'#1a1a1a')+'">'+x.v+'</div>';
+    html+='<div style="font-size:11px;color:#aaa;margin-top:3px">'+x.sub+'</div></div>';
+  });
+  html+='</div>';
+  html+=wochenplanHTML(entries,wkD,wkStart,wkEnd,t,true);
+  var rows=entries.filter(function(e){return D.showPast||((e.bis||e.von)>=t);}).sort(function(a,b){return b.von.localeCompare(a.von);});
+  html+='<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;flex-wrap:wrap">';
+  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;flex:1">Alle Abwesenheiten ('+rows.length+')</div>';
+  html+='<button class="btn btn-sm" data-showpast="1">'+(D.showPast?'Nur aktuelle & kommende':'Vergangene einblenden')+'</button></div>';
+  if(rows.length){
+    html+='<div style="overflow-x:auto"><table><thead><tr><th>Mitarbeitende:r</th><th>Art (\u00e4nderbar)</th><th>Von</th><th>Bis</th><th style="text-align:center">Tage</th><th>Status</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(e){
+      var ma=getMa(e.ma);
+      var artSel='<select data-chgart="'+e.id+'" style="width:auto;min-width:120px;padding:3px 6px;font-size:11px">'+ART_ALL.map(function(a){return '<option'+(e.art===a?' selected':'')+'>'+a+'</option>';}).join('')+'</select>';
+      html+='<tr><td><strong>'+getName(e.ma)+'</strong><br><span style="font-size:10px;color:#aaa">'+e.ma+' \u00b7 '+ma.f+'</span></td>';
+      html+='<td>'+artSel+'</td><td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td>';
+      html+='<td style="text-align:center">'+e.tage+'</td>';
+      html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+(e.gen||'\u2013')+'</span></td>';
+      html+='<td><button class="btn btn-sm" data-del="'+e.id+'" style="font-size:10px;padding:2px 7px;color:#A32D2D" title="Eintrag l\u00f6schen">\u2715</button></td></tr>';
+    });
+    html+='</tbody></table></div>';
+  } else html+='<div style="font-size:12px;color:#aaa;padding:10px">Keine aktuellen oder kommenden Abwesenheiten.</div>';
+  return html;
+}
+
+function chgArt(id,art){
+  var e=D.entries.find(function(x){return x.id===id;});if(!e)return;
+  e.art=art;
+  if(ART_GEN.indexOf(art)>=0){if(!e.gen||e.gen==='\u2013')e.gen='Ausstehend';}
+  else e.gen='\u2013';
+  triggerSave();flash(id+' \u2192 '+art);renderNav();renderContent();
+}
+
+function wochenplanHTML(entries,wkD,wkStart,wkEnd,t,compact){
+  var kw=isoWeek(wkD[0]);var DE=['Mo','Di','Mi','Do','Fr'];
+  var cols='120px repeat(5,1fr)';
+  var wkMAs=STAMM.filter(function(ma){return ma.on&&wkD.some(function(d){var ds=dISO(d);return entries.some(function(e){return e.ma===ma.id&&e.gen!=='Nein'&&e.von<=ds&&(e.bis||e.von)>=ds;});});});
+  var html='<div class="wk-outer"><div class="wk-nav">';
+  html+='<button onclick="G.weekOff('+(D.weekOff-1)+')">← Vorwoche</button>';
+  html+='<span style="font-size:12px;font-weight:600;color:'+NAVY+'">KW '+kw+'</span>';
+  html+='<span style="font-size:11px;color:#888">'+fmtD(wkStart)+' – '+fmtD(wkEnd)+'</span>';
+  html+='<button onclick="G.weekOff('+(D.weekOff+1)+')">Folgewoche →</button></div>';
+  html+='<div style="display:grid;grid-template-columns:'+cols+';gap:2px;margin-bottom:4px"><div></div>';
+  wkD.forEach(function(d,i){var ds=dISO(d);var isT=ds===t;var isFt=!!FEIERTAGE[ds];html+='<div class="wk-head'+(isT?' today':'')+'">';html+=DE[i]+'<br><span style="font-size:9px;font-weight:400;color:'+(isFt?'#aaa':'inherit')+'">'+fmtD(ds)+(isFt?'*':'')+'</span></div>';});
+  html+='</div>';
+  if(wkMAs.length===0){html+='<div style="text-align:center;color:#aaa;padding:20px;font-size:12px">✅ Alle anwesend diese Woche</div>';}
+  else{wkMAs.forEach(function(ma){html+='<div style="display:grid;grid-template-columns:'+cols+';gap:2px;margin-bottom:2px"><div class="wk-name"><span>'+getName(ma.id)+'</span><span style="font-size:9px;color:#aaa;font-weight:400">'+ma.c+'</span></div>';wkD.forEach(function(d){var ds=dISO(d);var isFt=!!FEIERTAGE[ds];if(isFt){html+='<div class="wk-cell wk-holiday" title="'+FEIERTAGE[ds]+'">FT</div>';return;}var abs=entries.filter(function(e){return e.ma===ma.id&&e.gen!=='Nein'&&e.von<=ds&&(e.bis||e.von)>=ds;});if(abs.length===0){html+='<div class="wk-cell wk-empty'+(ds===t?' today':'')+'" title="Anwesend"></div>';}else{var e=abs[0];html+='<div class="wk-cell '+artClass(e.art)+'" title="'+e.art+' · '+e.tage+'d">'+e.art.slice(0,2)+'</div>';}});html+='</div>';});}
+  html+='<div class="wk-legend">';
+  [['wk-url','Urlaub'],['wk-krank','AU'],['wk-bild','Bildungsurlaub'],['wk-fort','Fortbildung'],['wk-ab','Abwesenheit'],['wk-son','Sonderurlaub/Freistellung'],['wk-holiday','Feiertag']].forEach(function(l){html+='<span><span class="badge wk-pill '+l[0]+'">'+l[1].slice(0,2)+'</span> '+l[1]+'</span>';});
+  html+='</div></div>';
+  return html;
+}
+
+function viewWoche(entries,t){var baseD=new Date(Date.now()+D.weekOff*604800000);var wkD=weekDays(baseD);return wochenplanHTML(entries,wkD,dISO(wkD[0]),dISO(wkD[4]),t,false);}
+
+function viewKonto(entries,t){
+  var html='<div style="overflow-x:auto"><table><thead><tr><th>MA_ID</th><th>Code</th><th>Funktion</th><th style="text-align:center">Anspruch</th><th style="text-align:center">Grundansp.</th><th style="text-align:center">Übert. VJ</th><th style="text-align:center">Genommen</th><th style="text-align:center">Geplant</th><th style="text-align:center">Rest</th><th style="min-width:90px">Fortschritt</th></tr></thead><tbody>';
+  var totA=0,totG=0,totP=0;
+  STAMM.filter(function(m){return m.on&&m.ju>0;}).forEach(function(ma){
+    var ue=ma.ue||0;var allUrl=entries.filter(function(e){return e.ma===ma.id&&e.art==='Urlaub'&&e.gen==='Ja';});
+    var genT=allUrl.filter(function(e){return e.von<=t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
+    var planT=allUrl.filter(function(e){return e.von>t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
+    var rest=ma.ju-genT;var pct=ma.ju>0?Math.min(110,Math.round((genT+planT)/ma.ju*100)):0;var pctG=ma.ju>0?Math.min(100,Math.round(genT/ma.ju*100)):0;
+    var restC=rest<0?'#791F1F':rest<5?'#B45309':'#1a1a1a';
+    totA+=ma.ju;totG+=genT;totP+=planT;
+    html+='<tr'+(rest<0?' style="background:#FFF0F0"':ue>0?' style="background:#FFFBE6"':'')+'>'; 
+    html+='<td><strong>'+getName(ma.id)+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.id+'</span></td><td><span class="badge" style="background:#f1efe8;color:#5f5e5a">'+ma.c+'</span></td><td style="font-size:11px;color:#555">'+ma.f+'</td>';
+    html+='<td style="text-align:center;font-weight:600">'+ma.ju+'</td><td style="text-align:center;color:#555">'+ma.b+'</td><td style="text-align:center;font-weight:'+(ue>0?'600':'400')+';color:'+(ue>0?'#085041':'#ccc')+'">'+ue+'</td>';
+    html+='<td style="text-align:center;font-weight:500;color:#0C447C">'+(genT||'—')+'</td><td style="text-align:center;color:#888">'+(planT||'—')+'</td>';
+    html+='<td style="text-align:center;font-weight:600;color:'+restC+'">'+rest+'</td>';
+    html+='<td><div style="position:relative;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;min-width:80px"><div style="position:absolute;left:0;top:0;height:100%;width:'+Math.min(100,pct)+'%;background:#B5D4F4;border-radius:4px"></div><div style="position:absolute;left:0;top:0;height:100%;width:'+pctG+'%;background:'+NAVY+';border-radius:4px"></div></div><div style="font-size:9px;color:#aaa;text-align:right;margin-top:1px">'+pctG+'%</div></td></tr>';
+  });
+  html+='<tr style="background:#f5f5f3;font-weight:600"><td colspan="3">Summe</td><td style="text-align:center">'+totA+'T</td><td></td><td></td><td style="text-align:center;color:#0C447C">'+totG+'T</td><td style="text-align:center;color:#888">'+totP+'T</td><td style="text-align:center">'+(totA-totG)+'T</td><td></td></tr>';
+  html+='</tbody></table></div><div style="font-size:10px;color:#aaa;margin-top:8px;display:flex;gap:14px;flex-wrap:wrap"><span>\u25a0 <span style="color:'+NAVY+'">Genommen</span></span><span>\u25a0 <span style="color:#B5D4F4">Geplant</span></span><span style="background:#FFF0F0;padding:1px 4px;border-radius:3px">\u26a0 Rot = \u00dcberschritten</span><span>Stand: '+fmtD(t)+' \u00b7 Feiertage abgezogen</span></div>';
+  html+=kontoMonatsdetail(entries,t);
+  return html;
+}
+
+var MONATE=['Januar','Februar','M\u00e4rz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+function netDaysClip(von,bis,y,m){
+  var mS=y+'-'+z(m+1)+'-01';
+  var last=new Date(y,m+1,0).getDate();
+  var mE=y+'-'+z(m+1)+'-'+z(last);
+  var a=von>mS?von:mS;
+  var b2=(bis||von)<mE?(bis||von):mE;
+  if(a>b2)return 0;
+  return netDays(a,b2);
+}
+
+function kontoMonatsdetail(entries,t){
+  var km=D.km;
+  var maOpts=STAMM.filter(function(m){return m.on;}).map(function(m){
+    return '<option value="'+m.id+'"'+(km.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';
+  }).join('');
+  var html='<div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:14px">';
+  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Monatsdetail \u00b7 Urlaub & AU pro Mitarbeitende:r</div>';
+  html+='<select data-km-ma style="max-width:340px;margin-bottom:10px"><option value="">\u2013 Mitarbeitende:n w\u00e4hlen \u2013</option>'+maOpts+'</select>';
+  if(!km.ma){html+='</div>';return html;}
+  html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">';
+  for(var i=0;i<12;i++){
+    var act=km.mon===i;
+    html+='<button class="btn btn-sm" data-km-mon="'+i+'" style="padding:4px 9px;font-size:11px;'+(act?'background:'+NAVY+';color:#fff;border-color:'+NAVY:'')+'">'+MONATE[i].slice(0,3)+'</button>';
+  }
+  html+='</div>';
+  var y=2026;
+  var mEnt=entries.filter(function(e){
+    if(e.ma!==km.ma)return false;
+    if(['Urlaub','AU','Abwesenheit'].indexOf(e.art)<0)return false;
+    return netDaysClip(e.von,e.bis,y,km.mon)>0;
+  }).sort(function(a,b){return a.von.localeCompare(b.von);});
+  var sumU=0,sumA=0;
+  html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:6px">'+getName(km.ma)+' \u00b7 '+MONATE[km.mon]+' '+y+'</div>';
+  if(mEnt.length){
+    html+='<table><thead><tr><th>Art</th><th>Von</th><th>Bis</th><th style="text-align:center">AT im Monat</th><th style="text-align:center">AT gesamt</th><th>Status</th></tr></thead><tbody>';
+    mEnt.forEach(function(e){
+      var dM=netDaysClip(e.von,e.bis,y,km.mon);
+      if(e.art==='Urlaub')sumU+=dM;else sumA+=dM;
+      html+='<tr><td><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span></td>';
+      html+='<td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td>';
+      html+='<td style="text-align:center;font-weight:600">'+dM+'</td><td style="text-align:center;color:#888">'+e.tage+'</td>';
+      html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+(e.gen||'\u2013')+'</span></td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
+    html+='<div class="stat" style="flex:0 0 140px"><div style="font-size:11px;color:#888">Urlaub</div><div style="font-size:20px;font-weight:500;color:#0C447C">'+sumU+' AT</div></div>';
+    html+='<div class="stat" style="flex:0 0 140px"><div style="font-size:11px;color:#888">AU / Abwesenheit</div><div style="font-size:20px;font-weight:500;color:#791F1F">'+sumA+' AT</div></div>';
+    html+='</div>';
+  } else html+='<div style="font-size:12px;color:#aaa;padding:8px 0">Keine Urlaubs- oder AU-Tage in diesem Monat.</div>';
+  html+='</div>';
+  return html;
+}
+
+function isFest(ma){return ma&&ma.c&&ma.c.indexOf('AE')!==0;}
+
+function exportAAG(){
+  var y=2026;
+  var rows=[['Monat','Gruppe','MA_ID','Name','AU-Arbeitstage im Monat','Zeitraum gesamt']];
+  var auE=D.entries.filter(function(e){return e.art==='AU'||e.art==='Abwesenheit';});
+  for(var m=0;m<12;m++){
+    var fest=[],ext=[],sF=0,sE=0;
+    auE.forEach(function(e){
+      var d=netDaysClip(e.von,e.bis,y,m);
+      if(d<=0)return;
+      var ma=getMa(e.ma);
+      var row=[MONATE[m],isFest(ma)?'Festangestellt':'Extern/Sonstige',e.ma,getName(e.ma),d,fmtD(e.von)+' - '+fmtD(e.bis||e.von)];
+      if(isFest(ma)){fest.push(row);sF+=d;}else{ext.push(row);sE+=d;}
+    });
+    if(fest.length||ext.length){
+      fest.forEach(function(r){rows.push(r);});
+      if(fest.length)rows.push([MONATE[m],'SUMME Festangestellt (AAG-relevant)','','',sF,'']);
+      ext.forEach(function(r){rows.push(r);});
+      if(ext.length)rows.push([MONATE[m],'SUMME Extern/Sonstige','','',sE,'']);
+      rows.push(['','','','','','']);
+    }
+  }
+  var csv=rows.map(function(r){return r.map(function(x){return '"'+String(x).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='GETEQ_AU-Report_AAG_'+today()+'.csv';a.click();
+  URL.revokeObjectURL(url);
+  flash('AU-Report (AAG) exportiert \u2713');
+}
+
+function viewEingabe(entries,t){
+  var uf=D.uf;
+  var tabBar='<div style="display:flex;gap:3px;background:#f1efe8;padding:3px;border-radius:7px;margin-bottom:10px">';
+  [['url','Urlaub / Abwesenheit'],['krank','AU-Meldung']].forEach(function(tb){
+    var act=D.tab===tb[0];
+    tabBar+='<button data-tab="'+tb[0]+'" style="flex:1;padding:6px;border:none;border-radius:5px;background:'+(act?NAVY:'transparent')+';color:'+(act?'#fff':'#888')+';font-weight:'+(act?'500':'400')+'">'+tb[1]+'</button>';
+  });
+  tabBar+='</div>';
+  if(D.tab==='krank'){return viewAU(entries,t,tabBar);}
+  var maOpts=STAMM.filter(function(m){return m.on;}).map(function(m){return '<option value="'+m.id+'"'+(uf.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';}).join('');
+  var artOpts=ART_ALL.map(function(a){return'<option'+(uf.art===a?' selected':'')+'>'+a+'</option>';}).join('');
+  var d_u=netDays(uf.von,uf.bis||uf.von);
+  var brauchtGen=ART_GEN.indexOf(uf.art)>=0;
+  var genOpts=['Ausstehend','Ja','Nein'].map(function(g){return'<option value="'+g+'"'+(uf.gen===g?' selected':'')+'>'+g+'</option>';}).join('');
+  var html='<div style="display:flex;gap:14px;flex-wrap:wrap"><div class="card" style="flex:1;min-width:260px">';
+  html+=tabBar;
+  if(D.editId)html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:6px;padding:7px 10px;font-size:12px;color:#085041;margin-bottom:10px">✏ Bearbeitungsmodus: '+D.editId+'</div>';
+  html+='<div class="row"><div><label class="lbl">MA_ID *</label><select onchange="ufSet(\'ma\',this.value)"><option value="">– wählen –</option>'+maOpts+'</select></div>';
+  html+='<div><label class="lbl">Art *</label><select onchange="ufSet(\'art\',this.value)">'+artOpts+'</select></div></div>';
+  html+='<div class="row"><div><label class="lbl">Von *</label><input type="date" value="'+uf.von+'" onchange="ufSet(\'von\',this.value)"></div><div><label class="lbl">Bis</label><input type="date" value="'+(uf.bis||'')+'" onchange="ufSet(\'bis\',this.value)"></div></div>';
+  html+='<div style="display:flex;justify-content:space-between;background:#f5f5f3;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;margin-bottom:9px"><span style="font-size:12px;color:#888">Arbeitstage Mo–Fr (ohne Feiertage)</span><span style="font-weight:500;color:'+(d_u>0?'#085041':'#aaa')+'">'+(d_u||'–')+'</span></div>';
+  if(brauchtGen||D.isHR)html+='<div style="margin-bottom:9px"><label class="lbl">Genehmigungsstatus</label><select onchange="ufSet(\'gen\',this.value)">'+genOpts+'</select></div>';
+  html+='<div style="margin-bottom:9px"><label class="lbl">Kommentar</label><input type="text" value="'+(uf.kom||'')+'" placeholder="optional" onchange="ufSet(\'kom\',this.value)" onkeydown="if(event.key===\'Enter\')saveEntry()"></div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="saveEntry()" '+(uf.ma?'':'disabled')+' style="flex:1;padding:9px;font-weight:500;border:none;border-radius:6px;background:'+(uf.ma?NAVY:'#e2e8f0')+';color:'+(uf.ma?'#fff':'#aaa')+'">'+( D.editId?'✓ Aktualisieren':'+ Speichern')+'</button>';
+  if(D.editId)html+='<button onclick="cancelEdit()" class="btn btn-sm">Abbrechen</button>';
+  html+='</div></div>';
+  html+='<div style="flex:0 0 280px;min-width:240px">';
+  if(uf.ma){
+    var mEnt=entries.filter(function(e){return e.ma===uf.ma;}).sort(function(a,b){return b.von.localeCompare(a.von);}).slice(0,8);
+    html+='<div class="card"><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Letzte Einträge · '+uf.ma+'</div>';
+    if(mEnt.length){mEnt.forEach(function(e){html+='<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f0f0ee;flex-wrap:wrap"><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span><span style="font-size:11px;flex:1">'+fmtD(e.von)+(e.bis&&e.bis!==e.von?' – '+fmtD(e.bis):'')+' ('+e.tage+'d)</span><span class="badge" style="'+genStyle(e.gen)+'">'+e.gen+'</span><button class="btn btn-sm" onclick="editEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 7px">✏</button><button class="btn btn-sm" onclick="delEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 7px;color:#A32D2D">✕</button></div>';});}
+    else html+='<div style="font-size:12px;color:#aaa">Keine Einträge</div>';
+    html+='</div>';
+  }
+  var sortEnt=entries.slice().sort(function(a,b){return b.von.localeCompare(a.von);}).slice(0,15);
+  html+='<div class="card" style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Alle Einträge ('+entries.length+')</div>';
+  if(sortEnt.length){sortEnt.forEach(function(e){html+='<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid #f0f0ee;font-size:11px;flex-wrap:wrap"><strong>'+e.ma+'</strong><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span><span style="flex:1;color:#888">'+fmtD(e.von)+'</span><span class="badge" style="'+genStyle(e.gen)+'">'+e.gen+'</span><button class="btn btn-sm" onclick="delEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 6px;color:#A32D2D">✕</button></div>';});
+  if(entries.length>15)html+='<div style="font-size:10px;color:#aaa;margin-top:4px">+'+( entries.length-15)+' weitere</div>';}
+  else html+='<div style="font-size:12px;color:#aaa">Noch keine Einträge</div>';
+  html+='</div></div></div>';
+  return html;
+}
+
+
+function flSet(k,v){D.fl[k]=v;renderContent();}
+
+function viewListe(entries,t){
+  var fl=D.fl;
+  var maOpts='<option value="">Alle Mitarbeitende</option>'+STAMM.map(function(m){
+    return '<option value="'+m.id+'"'+(fl.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';
+  }).join('');
+  var artOpts='<option value="">Alle Arten</option>'+ART_ALL.map(function(a){
+    return '<option'+(fl.art===a?' selected':'')+'>'+a+'</option>';
+  }).join('');
+  var genOpts='<option value="">Alle Status</option>'+['Ja','Nein','Ausstehend','&ndash;'].map(function(g){
+    var v=g==='&ndash;'?'\u2013':g;
+    return '<option value="'+v+'"'+(fl.gen===v?' selected':'')+'>'+g+'</option>';
+  }).join('');
+  var rows=entries.slice();
+  if(fl.ma)rows=rows.filter(function(e){return e.ma===fl.ma;});
+  if(fl.art)rows=rows.filter(function(e){return e.art===fl.art;});
+  if(fl.gen)rows=rows.filter(function(e){return (e.gen||'\u2013')===fl.gen;});
+  rows.sort(function(a,b){return b.von.localeCompare(a.von);});
+  var sumT=rows.reduce(function(s,e){return s+((+e.tage)||0);},0);
+
+  var html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+  html+='<select style="flex:1;min-width:160px" onchange="flSet(\'ma\',this.value)">'+maOpts+'</select>';
+  html+='<select style="flex:1;min-width:120px" onchange="flSet(\'art\',this.value)">'+artOpts+'</select>';
+  html+='<select style="flex:1;min-width:120px" onchange="flSet(\'gen\',this.value)">'+genOpts+'</select>';
+  html+='</div>';
+  html+='<div style="font-size:11px;color:#888;margin-bottom:8px">'+rows.length+' Eintr\u00e4ge &middot; '+sumT+' Arbeitstage</div>';
+  html+='<div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Mitarbeitende:r</th><th>Art</th><th>Von</th><th>Bis</th><th style="text-align:center">Tage</th><th>Status</th><th>Kommentar</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(e){
+    var ma=getMa(e.ma);
+    html+='<tr><td style="font-size:10px;color:#aaa">'+e.id+'</td>';
+    html+='<td><strong>'+getName(e.ma)+'</strong><br><span style="font-size:10px;color:#aaa">'+e.ma+' &middot; '+ma.f+'</span></td>';
+    html+='<td><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span></td>';
+    html+='<td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td>';
+    html+='<td style="text-align:center">'+e.tage+'</td>';
+    html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+(e.gen||'\u2013')+'</span></td>';
+    html+='<td style="font-size:11px;color:#888;max-width:140px;overflow:hidden;text-overflow:ellipsis">'+(e.kom||'')+'</td>';
+    html+='<td style="white-space:nowrap">';
+    html+='<button class="btn btn-sm" data-edit="'+e.id+'" style="font-size:10px;padding:2px 7px">\u270f</button> ';
+    if(D.isHR&&e.gen==='Ausstehend')html+='<button class="btn btn-ok btn-sm" data-appr="'+e.id+'" style="font-size:10px;padding:2px 7px">\u2713</button> ';
+    html+='<button class="btn btn-sm" data-del="'+e.id+'" style="font-size:10px;padding:2px 7px;color:#A32D2D">\u2715</button>';
+    html+='</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  return html;
+}
+
+function kfSet(k,v){D.kf[k]=v;if(k==='von'&&(!D.kf.bis||D.kf.bis<v))D.kf.bis=v;renderContent();}
+
+function saveAU(){
+  var kf=D.kf;
+  if(!kf.ma){flash('Bitte Mitarbeitende:n w\u00e4hlen.','err');return;}
+  if(!kf.von){flash('Bitte Ab-Datum angeben.','err');return;}
+  var tage=netDays(kf.von,kf.bis||kf.von);
+  var nums=D.entries.map(function(e){return parseInt((e.id||'').replace('E-',''))||0;});
+  var id='E-'+String((nums.length?Math.max.apply(null,nums):0)+1).padStart(4,'0');
+  D.entries.push({id:id,ma:kf.ma,art:'AU',von:kf.von,bis:kf.bis||kf.von,tage:tage,gen:'\u2013',kom:kf.kom||''});
+  D.kf={ma:'',von:'',bis:'',kom:''};
+  flash('AU gemeldet \u00b7 '+id+' ('+tage+' AT)');
+  triggerSave();renderNav();renderContent();
+}
+
+function viewAU(entries,t,tabBar){
+  var kf=D.kf;
+  var maOpts=STAMM.filter(function(m){return m.on;}).map(function(m){
+    return '<option value="'+m.id+'"'+(kf.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';
+  }).join('');
+  var d_k=netDays(kf.von,kf.bis||kf.von);
+  var html='<div style="display:flex;gap:14px;flex-wrap:wrap"><div class="card" style="flex:1;min-width:260px">';
+  html+=tabBar;
+  html+='<div class="infobox">&#x23F0; Meldepflicht bis <strong>10:00 Uhr</strong> &middot; krank-meldung@geteq.org<br>Erfasst nur den AU-Zeitraum &ndash; keine Diagnose, kein Grund.</div>';
+  html+='<div style="margin-bottom:9px"><label class="lbl">Mitarbeitende:r *</label><select onchange="kfSet(\'ma\',this.value)"><option value="">\u2013 w\u00e4hlen \u2013</option>'+maOpts+'</select></div>';
+  html+='<div class="row"><div><label class="lbl">Ab Datum *</label><input type="date" value="'+(kf.von||'')+'" onchange="kfSet(\'von\',this.value)"></div>';
+  html+='<div><label class="lbl">Voraus. bis</label><input type="date" value="'+(kf.bis||'')+'" onchange="kfSet(\'bis\',this.value)"></div></div>';
+  html+='<div style="display:flex;justify-content:space-between;background:#f5f5f3;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;margin-bottom:9px">';
+  html+='<span style="font-size:12px;color:#888">Arbeitstage Mo\u2013Fr (ohne Feiertage)</span><span style="font-weight:500;color:'+(d_k>0?'#085041':'#aaa')+'">'+(d_k||'\u2013')+'</span></div>';
+  html+='<div style="margin-bottom:9px"><label class="lbl">Notiz (keine Gesundheitsangaben)</label><input type="text" value="'+(kf.kom||'').replace(/"/g,'&quot;')+'" placeholder="z. B. AU-Bescheinigung liegt vor" onchange="kfSet(\'kom\',this.value)"></div>';
+  html+='<button onclick="saveAU()" '+(kf.ma?'':'disabled')+' style="width:100%;padding:9px;font-weight:500;border:none;border-radius:6px;background:'+(kf.ma?'#633806':'#e2e8f0')+';color:'+(kf.ma?'#fff':'#aaa')+'">Meldung speichern</button>';
+  html+='</div>';
+  // Rechte Spalte: aktuelle Abwesenheiten
+  var akt=entries.filter(function(e){return (e.art==='AU'||e.art==='Abwesenheit')&&(e.bis||e.von)>=t;}).sort(function(a,b){return b.von.localeCompare(a.von);}).slice(0,10);
+  html+='<div class="card" style="flex:0 0 280px;min-width:240px">';
+  html+='<div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Aktuelle AU / Abwesenheiten</div>';
+  if(akt.length){akt.forEach(function(e){
+    html+='<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f0f0ee;flex-wrap:wrap">';
+    html+='<span style="font-size:11px;flex:1"><strong>'+getName(e.ma)+'</strong><br>'+fmtD(e.von)+(e.bis&&e.bis!==e.von?' \u2013 '+fmtD(e.bis):'')+' ('+e.tage+'d)</span>';
+    html+='<button class="btn btn-sm" data-del="'+e.id+'" style="font-size:10px;padding:2px 7px;color:#A32D2D">\u2715</button></div>';
+  });}
+  else html+='<div style="font-size:12px;color:#aaa">Keine aktuellen Abwesenheiten</div>';
+  html+='</div></div>';
+  return html;
+}
+
+function viewStammdaten(){
+  var rows='';
+  var aktiv=STAMM.filter(function(m){return m.on;});
+  aktiv.forEach(function(ma,i){
+    var val=(D.namen[ma.id]||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    rows+='<div style="display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:6px">'
+      +'<div><strong>'+ma.id+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.c+' &middot; '+ma.f+'</span><br><span style="font-size:10px;color:#0C447C">'+(ma.wh||0)+' h/Wo &middot; JU '+ma.ju+'</span></div>'
+      +'<input type="text" data-maid="'+ma.id+'" value="'+val+'" placeholder="Vorname Nachname"'
+      +' style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%">'
+      +'</div>';
+  });
+  return '<div style="max-width:620px">'
+    +'<div style="font-size:13px;color:#555;margin-bottom:14px;padding:10px 14px;background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px">'
+    +'&check; Namen werden in SharePoint gespeichert &ndash; nicht im &ouml;ffentlichen Code. Einmalig eintragen, f&uuml;r alle drei sichtbar.</div>'
+    +'<div style="display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:4px;padding:6px 10px;background:#f5f5f3;border-radius:6px;font-size:11px;font-weight:600;color:#888">'
+    +'<span>MA_ID / Code</span><span>Anzeigename (Klarname)</span></div>'
+    +rows
+    +'<div style="margin-top:16px;display:flex;gap:10px">'
+    +'<button class="btn btn-p" onclick="saveNamen()" style="padding:9px 20px;font-weight:600">&starf; Speichern (SharePoint)</button>'
+    +'<button class="btn btn-s btn-sm" onclick="clearNamen()">Alle l&ouml;schen</button>'
+    +'</div></div>';
+}
+
+function saveNamen(){
+  document.querySelectorAll('[data-maid]').forEach(function(inp){
+    var id=inp.getAttribute('data-maid');
+    D.namen[id]=inp.value.trim();
+  });
+  triggerSave();
+  flash('Namen gespeichert ✓');
+}
+function clearNamen(){
+  if(!confirm('Alle Namen löschen?'))return;
+  D.namen={};triggerSave();renderContent();
+}
+
+function viewEinstellungen(entries){
+  var html='<div style="display:flex;gap:14px;flex-wrap:wrap"><div class="card" style="flex:1;min-width:260px">';
+  html+='<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:10px">☁ Cloud-Sync Status</div>';
+  html+='<div style="background:#f5f5f3;border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;line-height:2">';
+  html+='<div>Modus: <strong style="color:'+(cloudEnabled?'#085041':'#791F1F')+'">'+(cloudEnabled?'☁ Microsoft Cloud (SharePoint)':'⚠ Offline / lokal')+'</strong></div>';
+  html+='<div>Nutzer: <strong>'+(currentUser?currentUser.name||currentUser.username:'nicht angemeldet')+'</strong></div>';
+  html+='<div>Datei: <code style="font-size:10px">'+CFG.dataPath+'</code></div>';
+  html+='<div>Einträge: <strong>'+entries.length+'</strong></div>';
+  html+='<div>Dashboard-Version: <strong>v'+VERSION+'</strong></div></div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn btn-p btn-sm" onclick="forceSyncNow()">☁ Jetzt synchronisieren</button><button class="btn btn-sm" onclick="exportJSON()">↓ JSON exportieren</button><button class="btn btn-sm" onclick="exportAAG()">↓ AU-Report (AAG)</button><button class="btn btn-sm" onclick="document.getElementById(\'imp\').click()">↑ JSON importieren</button><input type="file" id="imp" accept=".json" style="display:none" onchange="doImportFile(this)"></div>';
+  html+='<hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0"><div style="font-size:12px;font-weight:600;color:#555;margin-bottom:8px">📱 Teams / Android</div>';
+  html+='<ol style="font-size:12px;padding-left:16px;line-height:2;color:#555"><li>Dashboard über Teams-Tab öffnen</li><li>Einmalig Microsoft-Login – danach automatisch</li><li>Alle Änderungen werden sofort in SharePoint gespeichert</li><li>Alle drei Nutzenden sehen immer den aktuellen Stand</li></ol></div>';
+  if(D.isHR){
+    html+='<div class="card" style="border-color:#E24B4A;min-width:200px;flex:0 0 auto"><div style="font-size:12px;font-weight:600;color:#A32D2D;margin-bottom:10px">⚠ HR-Aktionen</div><button class="btn btn-sm" onclick="if(confirm(\'Alle Einträge löschen?\'))clearAll()">Alle Einträge löschen</button><div style="font-size:11px;color:#aaa;margin-top:6px">Stammdaten bleiben erhalten.</div><hr style="border:none;border-top:1px solid #e2e8f0;margin:10px 0"><button class="btn btn-sm" onclick="hrLock()">HR-Modus beenden</button></div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ENTRY ACTIONS
+// ═══════════════════════════════════════════════════════
+function ufSet(key,val){D.uf[key]=val;if(key==='von'&&(!D.uf.bis||D.uf.bis<val))D.uf.bis=val;renderContent();}
+
+function saveEntry(){
+  var uf=D.uf;
+  if(!uf.ma){flash('Bitte MA_ID auswählen.','err');return;}
+  if(!uf.von){flash('Bitte Von-Datum angeben.','err');return;}
+  var tage=netDays(uf.von,uf.bis||uf.von);
+  var brauchtGen=ART_GEN.indexOf(uf.art)>=0;
+  var gen=brauchtGen?uf.gen:'–';
+  if(D.editId){
+    var idx=D.entries.findIndex(function(e){return e.id===D.editId;});
+    if(idx>-1)D.entries[idx]={id:D.editId,ma:uf.ma,art:uf.art,von:uf.von,bis:uf.bis||uf.von,tage:tage,gen:gen,kom:uf.kom};
+    flash('Antrag '+D.editId+' aktualisiert ✓');D.editId=null;
+  } else {
+    var nums=D.entries.map(function(e){return parseInt((e.id||'').replace('E-',''))||0;});
+    var id='E-'+String((nums.length?Math.max.apply(null,nums):0)+1).padStart(4,'0');
+    D.entries.push({id:id,ma:uf.ma,art:uf.art,von:uf.von,bis:uf.bis||uf.von,tage:tage,gen:gen,kom:uf.kom||''});
+    flash('Gespeichert · '+id+' ('+tage+' Arbeitstage)');
+  }
+  D.uf={ma:uf.ma,art:uf.art,von:'',bis:'',gen:'Ausstehend',kom:''};
+  triggerSave();renderNav();renderContent();
+}
+
+function editEntry(id){var e=D.entries.find(function(x){return x.id===id;});if(!e)return;D.uf={ma:e.ma,art:e.art,von:e.von,bis:e.bis,gen:e.gen,kom:e.kom||''};D.editId=id;G.view('eingabe');}
+function cancelEdit(){D.editId=null;D.uf={ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''};renderContent();}
+function delEntry(id){if(!confirm('Eintrag '+id+' löschen?'))return;D.entries=D.entries.filter(function(e){return e.id!==id;});flash('Eintrag '+id+' gelöscht');triggerSave();renderNav();renderContent();}
+function approve(id){var e=D.entries.find(function(x){return x.id===id;});if(e){e.gen='Ja';triggerSave();flash('Genehmigt: '+id);renderNav();renderContent();}}
+function deny(id){var e=D.entries.find(function(x){return x.id===id;});if(e){e.gen='Nein';triggerSave();flash('Abgelehnt: '+id);renderNav();renderContent();}}
+function clearAll(){D.entries=[];triggerSave();flash('Alle Einträge gelöscht');renderNav();renderContent();}
+function hrUnlock(){var v=prompt('HR-PIN:');if(v===PIN_HR){D.isHR=true;sessionStorage.setItem('geteq-hr','1');flash('HR-Modus aktiv');render();}else if(v!==null)flash('Falscher PIN','err');}
+function hrLock(){D.isHR=false;sessionStorage.removeItem('geteq-hr');flash('HR-Modus deaktiviert');render();}
+
+async function forceSyncNow(){
+  setSyncStatus('spin','Synchronisiere …');
+  var cloud=await cloudLoad();
+  var merged=mergeData({entries:D.entries,nid:D.nid,namen:D.namen},cloud);
+  D.entries=merged.entries;D.nid=merged.nid;D.namen=merged.namen||D.namen||{};
+  await cloudSave({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()});
+  render();flash('Sync abgeschlossen ✓');
+}
+
+function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
+function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;if(p.namen)D.namen=p.namen;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
+function exportCSV(){var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbeitstage','Genehmigt','Kommentar']];D.entries.forEach(function(e){var ma=getMa(e.ma);rows.push([e.id,e.ma,ma.f,e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);});var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.csv';a.click();URL.revokeObjectURL(url);flash('CSV-Export ✓');}
+
+// ═══════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════
+
+document.addEventListener('change',function(ev){
+  var s=ev.target.closest('select');if(!s)return;
+  if(s.hasAttribute('data-chgart')){chgArt(s.getAttribute('data-chgart'),s.value);}
+  else if(s.hasAttribute('data-km-ma')){D.km.ma=s.value;renderContent();}
+});
+document.addEventListener('click',function(ev){
+  var b=ev.target.closest('button');if(!b)return;
+  if(b.hasAttribute('data-showpast')){D.showPast=!D.showPast;renderContent();return;}
+  if(b.hasAttribute('data-km-mon')){D.km.mon=parseInt(b.getAttribute('data-km-mon'));renderContent();return;}
+  if(b.hasAttribute('data-edit')){editEntry(b.getAttribute('data-edit'));}
+  else if(b.hasAttribute('data-del')){delEntry(b.getAttribute('data-del'));}
+  else if(b.hasAttribute('data-appr')){approve(b.getAttribute('data-appr'));}
+  else if(b.hasAttribute('data-tab')){D.tab=b.getAttribute('data-tab');renderContent();}
+});
+
+initMSAL().then(async function(){
+  // Redirect-Antwort verarbeiten (nach Rueckkehr von Microsoft)
+  var redirectResult = null;
+  try { redirectResult = await msalInstance.handleRedirectPromise(); } catch(e) { console.warn('Redirect error:', e); }
+  if (redirectResult && redirectResult.account) {
+    currentUser  = redirectResult.account;
+    cloudEnabled = true;
+    await bootApp();
+    return;
+  }
+  // Stiller Login (Session vorhanden)
+  var ok = await silentLogin();
+  if(ok){
+    await bootApp();
+  }
+  // sonst Login-Screen bleibt sichtbar
+}).catch(function(e){
+  console.error('MSAL init error:', e);
+  var el = document.getElementById('lerr');
+  if (el) el.textContent = 'Init-Fehler: ' + (e.message||e);
+});
+</script>
+</body>
+</html>
