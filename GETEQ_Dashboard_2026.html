@@ -1,5 +1,6 @@
 <!-- ═══════════════════════════════════════════════════
-  GETEQ Abwesenheitsdashboard · VERSION 3.0 · Stand 02.07.2026
+  GETEQ Abwesenheitsdashboard · VERSION 3.1 · Stand 02.07.2026
+  v3.1: Jahreskalender-Ansicht (12 Monate) im Urlaubskonto pro Mitarbeitende:r
   v3.0: AU als eigene Art · Klarnamen in allen Ansichten · Übersicht: Art ändern/löschen
         Urlaubskonto: Monatsdetail pro MA · AAG-AU-Report (Fest/Extern) · Versionsanzeige · grauer Hintergrund
   Ab Freigabe durch GF: FINAL – inhaltliche Änderungen nur auf Anforderung.
@@ -130,7 +131,7 @@ tr:hover>td{background:#f5f3ee}
     <div class="login-hint">Melde dich mit deiner @geteq.org Adresse an.<br>Beim ersten Mal erscheint ein Microsoft-Popup.</div>
     <div class="offline-link" onclick="offlineMode()">Offline-Modus (kein Sync)</div>
   </div>
-  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.0</div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.1</div>
 </div>
 
 <!-- APP -->
@@ -316,7 +317,7 @@ function setSyncStatus(type, txt) {
 // ═══════════════════════════════════════════════════════
 var PIN_HR = '2000';
 var NAVY   = '#1A2E5A';
-var VERSION = '3.0';
+var VERSION = '3.1';
 
 var FEIERTAGE = {
   '2026-01-01':'Neujahr','2026-03-08':'Internationaler Frauentag',
@@ -605,39 +606,71 @@ function kontoMonatsdetail(entries,t){
     return '<option value="'+m.id+'"'+(km.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';
   }).join('');
   var html='<div style="margin-top:20px;border-top:2px solid #e2e8f0;padding-top:14px">';
-  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Monatsdetail \u00b7 Urlaub & AU pro Mitarbeitende:r</div>';
-  html+='<select data-km-ma style="max-width:340px;margin-bottom:10px"><option value="">\u2013 Mitarbeitende:n w\u00e4hlen \u2013</option>'+maOpts+'</select>';
+  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Jahres\u00fcbersicht \u00b7 Urlaub & AU pro Mitarbeitende:r</div>';
+  html+='<select data-km-ma style="max-width:340px;margin-bottom:12px"><option value="">\u2013 Mitarbeitende:n w\u00e4hlen \u2013</option>'+maOpts+'</select>';
   if(!km.ma){html+='</div>';return html;}
-  html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">';
-  for(var i=0;i<12;i++){
-    var act=km.mon===i;
-    html+='<button class="btn btn-sm" data-km-mon="'+i+'" style="padding:4px 9px;font-size:11px;'+(act?'background:'+NAVY+';color:#fff;border-color:'+NAVY:'')+'">'+MONATE[i].slice(0,3)+'</button>';
+  var y=2026;
+
+  // Tages-Markierungen: dateISO -> Art (Urlaub/AU haben Vorrang vor Sonstigem)
+  var marks={};
+  var prio={'Urlaub':3,'AU':3,'Abwesenheit':2};
+  entries.filter(function(e){return e.ma===km.ma&&e.gen!=='Nein';}).forEach(function(e){
+    var d=new Date(e.von+'T12:00:00');var end=new Date((e.bis||e.von)+'T12:00:00');
+    while(d<=end){
+      var ds=dISO(d);
+      if(!marks[ds]||(prio[e.art]||1)>=(prio[marks[ds]]||1))marks[ds]=e.art;
+      d.setDate(d.getDate()+1);
+    }
+  });
+
+  var sumU=0,sumA=0;
+  entries.filter(function(e){return e.ma===km.ma;}).forEach(function(e){
+    if(e.art==='Urlaub'&&e.gen==='Ja')sumU+=(+e.tage)||0;
+    if(e.art==='AU'||e.art==='Abwesenheit')sumA+=(+e.tage)||0;
+  });
+
+  html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:8px">'+getName(km.ma)+' \u00b7 Kalender '+y+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">';
+  var WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  for(var m=0;m<12;m++){
+    html+='<div style="border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fff">';
+    html+='<div style="font-size:11px;font-weight:600;color:'+NAVY+';margin-bottom:5px">'+MONATE[m]+'</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font-size:10px;text-align:center">';
+    WD.forEach(function(w){html+='<div style="color:#aaa;font-weight:600;font-size:9px">'+w+'</div>';});
+    var offset=(new Date(y,m,1).getDay()+6)%7;
+    for(var i=0;i<offset;i++)html+='<div></div>';
+    var last=new Date(y,m+1,0).getDate();
+    for(var day=1;day<=last;day++){
+      var ds=y+'-'+z(m+1)+'-'+z(day);
+      var wd=new Date(y,m,day).getDay();
+      var st='padding:3px 0;border-radius:3px;';
+      var title=fmtD(ds);
+      if(FEIERTAGE[ds]){st+='background:#f0f0ee;color:#aaa;';title+=' \u00b7 '+FEIERTAGE[ds];}
+      else if(marks[ds]){
+        var a=marks[ds];title+=' \u00b7 '+a;
+        if(a==='Urlaub')st+='background:#0C447C;color:#fff;font-weight:600;';
+        else if(a==='AU'||a==='Abwesenheit')st+='background:#B23A2E;color:#fff;font-weight:600;';
+        else st+='background:#EF9F27;color:#fff;';
+      }
+      else if(wd===0||wd===6)st+='color:#ccc;';
+      else st+='color:#555;';
+      if(ds===t)st+='outline:2px solid '+NAVY+';outline-offset:-1px;';
+      html+='<div style="'+st+'" title="'+title+'">'+day+'</div>';
+    }
+    html+='</div></div>';
   }
   html+='</div>';
-  var y=2026;
-  var mEnt=entries.filter(function(e){
-    if(e.ma!==km.ma)return false;
-    if(['Urlaub','AU','Abwesenheit'].indexOf(e.art)<0)return false;
-    return netDaysClip(e.von,e.bis,y,km.mon)>0;
-  }).sort(function(a,b){return a.von.localeCompare(b.von);});
-  var sumU=0,sumA=0;
-  html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:6px">'+getName(km.ma)+' \u00b7 '+MONATE[km.mon]+' '+y+'</div>';
-  if(mEnt.length){
-    html+='<table><thead><tr><th>Art</th><th>Von</th><th>Bis</th><th style="text-align:center">AT im Monat</th><th style="text-align:center">AT gesamt</th><th>Status</th></tr></thead><tbody>';
-    mEnt.forEach(function(e){
-      var dM=netDaysClip(e.von,e.bis,y,km.mon);
-      if(e.art==='Urlaub')sumU+=dM;else sumA+=dM;
-      html+='<tr><td><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span></td>';
-      html+='<td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td>';
-      html+='<td style="text-align:center;font-weight:600">'+dM+'</td><td style="text-align:center;color:#888">'+e.tage+'</td>';
-      html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+(e.gen||'\u2013')+'</span></td></tr>';
-    });
-    html+='</tbody></table>';
-    html+='<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-    html+='<div class="stat" style="flex:0 0 140px"><div style="font-size:11px;color:#888">Urlaub</div><div style="font-size:20px;font-weight:500;color:#0C447C">'+sumU+' AT</div></div>';
-    html+='<div class="stat" style="flex:0 0 140px"><div style="font-size:11px;color:#888">AU / Abwesenheit</div><div style="font-size:20px;font-weight:500;color:#791F1F">'+sumA+' AT</div></div>';
-    html+='</div>';
-  } else html+='<div style="font-size:12px;color:#aaa;padding:8px 0">Keine Urlaubs- oder AU-Tage in diesem Monat.</div>';
+  // Legende + Summen
+  html+='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#888;align-items:center">';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#0C447C;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Urlaub</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#B23A2E;border-radius:3px;vertical-align:middle;margin-right:4px"></span>AU / Abwesenheit</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#EF9F27;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Sonstige Art</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#f0f0ee;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Feiertag Berlin</span>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">';
+  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Urlaub genehmigt</div><div style="font-size:20px;font-weight:500;color:#0C447C">'+sumU+' AT</div></div>';
+  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">AU / Abwesenheit</div><div style="font-size:20px;font-weight:500;color:#B23A2E">'+sumA+' AT</div></div>';
+  html+='</div>';
   html+='</div>';
   return html;
 }
