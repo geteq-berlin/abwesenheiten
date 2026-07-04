@@ -1,5 +1,6 @@
 <!-- ═══════════════════════════════════════════════════
-  GETEQ Abwesenheitsdashboard · VERSION 3.1 · Stand 02.07.2026
+  GETEQ Abwesenheitsdashboard · VERSION 3.2 · Stand 04.07.2026
+  v3.2: Resturlaub-Anzeige im Einzelkalender (Anspruch / Verbleibend)
   v3.1: Jahreskalender-Ansicht (12 Monate) im Urlaubskonto pro Mitarbeitende:r
   v3.0: AU als eigene Art · Klarnamen in allen Ansichten · Übersicht: Art ändern/löschen
         Urlaubskonto: Monatsdetail pro MA · AAG-AU-Report (Fest/Extern) · Versionsanzeige · grauer Hintergrund
@@ -131,7 +132,7 @@ tr:hover>td{background:#f5f3ee}
     <div class="login-hint">Melde dich mit deiner @geteq.org Adresse an.<br>Beim ersten Mal erscheint ein Microsoft-Popup.</div>
     <div class="offline-link" onclick="offlineMode()">Offline-Modus (kein Sync)</div>
   </div>
-  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.1</div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.2</div>
 </div>
 
 <!-- APP -->
@@ -317,7 +318,7 @@ function setSyncStatus(type, txt) {
 // ═══════════════════════════════════════════════════════
 var PIN_HR = '2000';
 var NAVY   = '#1A2E5A';
-var VERSION = '3.1';
+var VERSION = '3.2';
 
 var FEIERTAGE = {
   '2026-01-01':'Neujahr','2026-03-08':'Internationaler Frauentag',
@@ -609,6 +610,7 @@ function kontoMonatsdetail(entries,t){
   html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Jahres\u00fcbersicht \u00b7 Urlaub & AU pro Mitarbeitende:r</div>';
   html+='<select data-km-ma style="max-width:340px;margin-bottom:12px"><option value="">\u2013 Mitarbeitende:n w\u00e4hlen \u2013</option>'+maOpts+'</select>';
   if(!km.ma){html+='</div>';return html;}
+  var ma=getMa(km.ma);
   var y=2026;
 
   // Tages-Markierungen: dateISO -> Art (Urlaub/AU haben Vorrang vor Sonstigem)
@@ -667,9 +669,15 @@ function kontoMonatsdetail(entries,t){
   html+='<span><span style="display:inline-block;width:12px;height:12px;background:#EF9F27;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Sonstige Art</span>';
   html+='<span><span style="display:inline-block;width:12px;height:12px;background:#f0f0ee;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Feiertag Berlin</span>';
   html+='</div>';
+  var rest=ma.ju-sumU;
+  var restC=rest<0?'#791F1F':rest<5?'#B45309':'#085041';
   html+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">';
   html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Urlaub genehmigt</div><div style="font-size:20px;font-weight:500;color:#0C447C">'+sumU+' AT</div></div>';
   html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">AU / Abwesenheit</div><div style="font-size:20px;font-weight:500;color:#B23A2E">'+sumA+' AT</div></div>';
+  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Anspruch 2026</div><div style="font-size:20px;font-weight:500;color:#1a1a1a">'+ma.ju+' AT</div></div>';
+  html+='<div class="stat" style="flex:0 0 160px;background:'+(rest<0?'#FFF0F0':rest<5?'#FFFBE6':'#f5faf5')+'">';
+  html+='<div style="font-size:11px;color:#888">Verbleibend</div>';
+  html+='<div style="font-size:20px;font-weight:600;color:'+restC+'">'+rest+' AT</div></div>';
   html+='</div>';
   html+='</div>';
   return html;
