@@ -573,7 +573,7 @@ function viewKonto(entries,t){
     var ue=ma.ue||0;var allUrl=entries.filter(function(e){return e.ma===ma.id&&e.art==='Urlaub'&&e.gen==='Ja';});
     var genT=allUrl.filter(function(e){return e.von<=t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
     var planT=allUrl.filter(function(e){return e.von>t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
-    var rest=ma.ju-genT;var pct=ma.ju>0?Math.min(110,Math.round((genT+planT)/ma.ju*100)):0;var pctG=ma.ju>0?Math.min(100,Math.round(genT/ma.ju*100)):0;
+    var rest=ma.ju-genT-planT;var pct=ma.ju>0?Math.min(110,Math.round((genT+planT)/ma.ju*100)):0;var pctG=ma.ju>0?Math.min(100,Math.round(genT/ma.ju*100)):0;
     var restC=rest<0?'#791F1F':rest<5?'#B45309':'#1a1a1a';
     totA+=ma.ju;totG+=genT;totP+=planT;
     html+='<tr'+(rest<0?' style="background:#FFF0F0"':ue>0?' style="background:#FFFBE6"':'')+'>'; 
