@@ -1,5 +1,7 @@
 <!-- ═══════════════════════════════════════════════════
-  GETEQ Abwesenheitsdashboard · VERSION 3.2 · Stand 04.07.2026
+  GETEQ Abwesenheitsdashboard · VERSION 3.4 · Stand 09.07.2026
+  v3.4: Interaktiver Jahreskalender in Übersicht · Krank ohne Attest · Alle Einträge
+  v3.3: JU editierbar im Dashboard · Urlaub→AU Gutschrift · STAMM-Korrekturen
   v3.2: Resturlaub-Anzeige im Einzelkalender (Anspruch / Verbleibend)
   v3.1: Jahreskalender-Ansicht (12 Monate) im Urlaubskonto pro Mitarbeitende:r
   v3.0: AU als eigene Art · Klarnamen in allen Ansichten · Übersicht: Art ändern/löschen
@@ -132,7 +134,7 @@ tr:hover>td{background:#f5f3ee}
     <div class="login-hint">Melde dich mit deiner @geteq.org Adresse an.<br>Beim ersten Mal erscheint ein Microsoft-Popup.</div>
     <div class="offline-link" onclick="offlineMode()">Offline-Modus (kein Sync)</div>
   </div>
-  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.2</div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.4</div>
 </div>
 
 <!-- APP -->
@@ -268,18 +270,20 @@ async function cloudSave(data) {
 function mergeData(local, cloud) {
   if (!cloud) return local;
   if (!local || !local.entries || local.entries.length === 0) return cloud;
-  // Cloud-Einträge als Map
-  var cloudMap = {};
-  (cloud.entries||[]).forEach(function(e){ cloudMap[e.id]=e; });
-  // Lokale Einträge die NICHT in Cloud sind → hinzufügen
-  var merged = (cloud.entries||[]).slice();
-  (local.entries||[]).forEach(function(e){
-    if (!cloudMap[e.id]) merged.push(e);
-  });
+  // Lokale Map – enthält die neuesten Änderungen auf diesem Gerät
+  var localMap = {};
+  (local.entries||[]).forEach(function(e){ localMap[e.id]=e; });
+  var cloudIds = {};
+  (cloud.entries||[]).forEach(function(e){ cloudIds[e.id]=1; });
+  // Basis: Cloud-Einträge, aber lokal bearbeitete Version bevorzugen (Bug-Fix: verhindert Revert nach Cloud-Save-Fehler)
+  var merged = (cloud.entries||[]).map(function(ce){ return localMap[ce.id]||ce; });
+  // Nur-lokal angelegte Einträge (Cloud-Save noch ausstehend) anhängen
+  (local.entries||[]).forEach(function(e){ if(!cloudIds[e.id]) merged.push(e); });
   return {
     entries: merged,
     nid: Math.max(local.nid||1, cloud.nid||1),
-    namen: Object.assign({}, local.namen||{}, cloud.namen||{}),
+    namen: Object.assign({}, cloud.namen||{}, local.namen||{}),
+    juConfig: Object.assign({}, cloud.juConfig||{}, local.juConfig||{}),
     meta: cloud.meta,
     ts: new Date().toISOString()
   };
@@ -288,7 +292,7 @@ function mergeData(local, cloud) {
 function triggerSave() {
   clearTimeout(saveDebounce);
   saveDebounce = setTimeout(async function(){
-    var payload = { entries: D.entries, nid: D.nid, namen: D.namen, ts: new Date().toISOString() };
+    var payload = { entries: D.entries, nid: D.nid, namen: D.namen, juConfig: D.juConfig, ts: new Date().toISOString() };
     // Immer lokal speichern
     try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify(payload)); } catch(e) {}
     // Cloud wenn verfügbar
@@ -318,7 +322,7 @@ function setSyncStatus(type, txt) {
 // ═══════════════════════════════════════════════════════
 var PIN_HR = '2000';
 var NAVY   = '#1A2E5A';
-var VERSION = '3.2';
+var VERSION = '3.4';
 
 var FEIERTAGE = {
   '2026-01-01':'Neujahr','2026-03-08':'Internationaler Frauentag',
@@ -328,19 +332,19 @@ var FEIERTAGE = {
   '2026-12-25':'1. Weihnachtstag','2026-12-26':'2. Weihnachtstag'
 };
 
-var ART_ALL = ['Urlaub','AU','Bildungsurlaub','Sonderurlaub','Fortbildung','Abwesenheit','Freistellung','Elternzeit','Sonstiges'];
+var ART_ALL = ['Urlaub','AU','Krank ohne Attest','Bildungsurlaub','Sonderurlaub','Fortbildung','Abwesenheit','Freistellung','Elternzeit','Sonstiges'];
 var ART_GEN = ['Urlaub','Bildungsurlaub','Sonderurlaub'];
 
 var STAMM = [
   {id:'MA-016',f:'Geschäftsführung',         wh:40,ju:30,b:30,ue:0,c:'GF-01',on:true},
   {id:'MA-020',f:'Stellv. Geschäftsführung', wh:35,ju:36,b:30,ue:6,c:'GF-02',on:true},
   {id:'MA-022',f:'Verwaltung',               wh:30,ju:32,b:30,ue:2,c:'VW-01',on:true},
-  {id:'MA-IT1',f:'IT-Support',               wh:30,ju:35,b:35,ue:0,c:'IT-01', on:true},
+  {id:'MA-IT1',f:'IT-Support',               wh:30,ju:29,b:29,ue:0,c:'IT-01', on:true},
   {id:'MA-003',f:'Koordinatorin',            wh:35,ju:30,b:30,ue:0,c:'KO-01',on:true},
   {id:'MA-019',f:'Koordinator',              wh:20,ju:30,b:30,ue:0,c:'KO-02',on:true},
   {id:'MA-026',f:'Schulungskoordinatorin',   wh:35,ju:30,b:30,ue:0,c:'KO-03',on:true},
-  {id:'MA-035',f:'Koordinatorin',            wh:30,ju:15,b:15,ue:0,c:'KO-04',on:true},
-  {id:'MA-034',f:'Koordinatorin',            wh:30,ju:30,b:30,ue:0,c:'KO-05',on:true},
+  {id:'MA-035',f:'Koordinatorin',            wh:30,ju:12,b:12,ue:0,c:'KO-04',on:true},
+  {id:'MA-034',f:'Koordinatorin',            wh:30,ju:18,b:18,ue:0,c:'KO-05',on:true},
   {id:'MA-002',f:'Evaluator',                wh:25,ju:35,b:35,ue:0,c:'EV-01',on:true},
   {id:'MA-004',f:'Evaluator',                wh:30,ju:35,b:35,ue:0,c:'EV-02',on:true},
   {id:'MA-032',f:'Evaluator',                wh:20,ju:35,b:35,ue:0,c:'EV-03',on:true},
@@ -364,7 +368,7 @@ var STAMM = [
 // ═══════════════════════════════════════════════════════
 //  APP-ZUSTAND
 // ═══════════════════════════════════════════════════════
-var D = {entries:[], nid:1, namen:{}, isHR:false, weekOff:0, view:'uebersicht', tab:'url',
+var D = {entries:[], nid:1, namen:{}, juConfig:{}, isHR:false, weekOff:0, view:'uebersicht', tab:'url', ov:{ma:''},
   fl:{ma:'',art:'',gen:''}, kf:{ma:'',von:'',bis:'',kom:''}, showPast:false, km:{ma:'',mon:new Date().getMonth()},
   uf:{ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''}, editId:null};
 
@@ -393,14 +397,15 @@ async function bootApp() {
   // 3. Mergen
   var merged = mergeData(local, cloud);
   if (merged) {
-    D.entries = merged.entries || [];
-    D.nid     = merged.nid || 1;
-    D.namen   = merged.namen || {};
+    D.entries  = merged.entries || [];
+    D.nid      = merged.nid || 1;
+    D.namen    = merged.namen || {};
+    D.juConfig = merged.juConfig || {};
   }
 
   // 4. Falls Cloud-Stand neuer als lokal → lokal aktualisieren
   if (cloud) {
-    try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify({entries:D.entries,nid:D.nid,ts:new Date().toISOString()})); } catch(e) {}
+    try { localStorage.setItem('geteq-ab-2026-v2', JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,juConfig:D.juConfig,ts:new Date().toISOString()})); } catch(e) {}
   }
 
   // HR via sessionStorage
@@ -422,15 +427,16 @@ function isoWeek(d){var dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getD
 function weekDays(d){var day=d.getDay(),mon=new Date(d);mon.setDate(d.getDate()-(day===0?6:day-1));var r=[];for(var i=0;i<5;i++){var x=new Date(mon);x.setDate(mon.getDate()+i);r.push(x);}return r;}
 function netDays(a,b){if(!a||!b)return 0;var s=new Date(a),e=new Date(b),n=0,d=new Date(s);if(s>e)return 0;while(d<=e){var ds=dISO(d);if(d.getDay()>0&&d.getDay()<6&&!FEIERTAGE[ds])n++;d.setDate(d.getDate()+1);}return n;}
 function getMa(id){return STAMM.find(function(m){return m.id===id;})||{f:'–',c:'–',ju:0,b:0,ue:0};}
+function getJu(id){return D.juConfig.hasOwnProperty(id)?D.juConfig[id]:(getMa(id).ju||0);}
 function getName(id){return D.namen[id]||id;}
-function artStyle(art){if(art==='Urlaub')return 'background:#E6F1FB;color:#0C447C';if(art==='AU')return 'background:#FCEBEB;color:#791F1F';if(art==='Bildungsurlaub')return 'background:#D1FAE5;color:#065F46';if(art==='Abwesenheit')return 'background:#FAEEDA;color:#633806';if(art==='Fortbildung')return 'background:#FAECE7;color:#712B13';if(art==='Sonderurlaub')return 'background:#EEEDFE;color:#3C3489';if(art==='Freistellung')return 'background:#FBEAF0;color:#72243E';return 'background:#f1efe8;color:#5f5e5a';}
-function artClass(art){if(art==='Urlaub')return 'wk-url';if(art==='AU')return 'wk-krank';if(art==='Abwesenheit')return 'wk-ab';if(art==='Fortbildung')return 'wk-fort';if(art==='Sonderurlaub'||art==='Freistellung')return 'wk-son';if(art==='Bildungsurlaub')return 'wk-bild';return 'wk-son';}
+function artStyle(art){if(art==='Urlaub')return 'background:#E6F1FB;color:#0C447C';if(art==='AU')return 'background:#FCEBEB;color:#791F1F';if(art==='Krank ohne Attest')return 'background:#FEF3C7;color:#92400E';if(art==='Bildungsurlaub')return 'background:#D1FAE5;color:#065F46';if(art==='Abwesenheit')return 'background:#FAEEDA;color:#633806';if(art==='Fortbildung')return 'background:#FAECE7;color:#712B13';if(art==='Sonderurlaub')return 'background:#EEEDFE;color:#3C3489';if(art==='Freistellung')return 'background:#FBEAF0;color:#72243E';return 'background:#f1efe8;color:#5f5e5a';}
+function artClass(art){if(art==='Urlaub')return 'wk-url';if(art==='AU')return 'wk-krank';if(art==='Krank ohne Attest')return 'wk-koa';if(art==='Abwesenheit')return 'wk-ab';if(art==='Fortbildung')return 'wk-fort';if(art==='Sonderurlaub'||art==='Freistellung')return 'wk-son';if(art==='Bildungsurlaub')return 'wk-bild';return 'wk-son';}
 function genStyle(g){if(g==='Ja')return 'background:#EAF3DE;color:#085041';if(g==='Nein')return 'background:#FCEBEB;color:#791F1F';return 'background:#f1efe8;color:#888';}
 
 // ═══════════════════════════════════════════════════════
 //  NAVIGATION & RENDER
 // ═══════════════════════════════════════════════════════
-var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['liste','📋 Einträge'],['eingabe','+ Neue Meldung'],['stamm','👥 Stammdaten'],['einst','⚙ Einstellungen']];
+var VIEWS=[['uebersicht','⌂ Übersicht'],['woche','📅 Wochenkalender'],['konto','☀ Urlaubskonto'],['alle','📋 Alle Einträge'],['eingabe','+ Neue Meldung'],['stamm','👥 Stammdaten'],['einst','⚙ Einstellungen']];
 
 var G={
   view:function(name){D.view=name;renderNav();renderContent();window.scrollTo({top:0,behavior:'smooth'});},
@@ -477,7 +483,7 @@ function renderContent(){
   else if(D.view==='woche')html=viewWoche(entries,t);
   else if(D.view==='konto')html=viewKonto(entries,t);
   else if(D.view==='eingabe')html=viewEingabe(entries,t);
-  else if(D.view==='liste')html=viewListe(entries,t);
+  else if(D.view==='alle')html=viewListe(entries,t);
   else if(D.view==='stamm')html=viewStammdaten();
   else if(D.view==='einst')html=viewEinstellungen(entries);
   document.getElementById('content').innerHTML=html;
@@ -490,58 +496,112 @@ function viewUebersicht(entries,t){
   var abwH=entries.filter(function(e){return e.gen!=='Nein'&&e.von<=t&&(e.bis||e.von)>=t;});
   var offen=entries.filter(function(e){return e.gen==='Ausstehend';});
   var baseD=new Date(Date.now()+D.weekOff*604800000);
-  var wkD=weekDays(baseD);
-  var wkStart=dISO(wkD[0]),wkEnd=dISO(wkD[4]);
+  var wkD=weekDays(baseD);var wkStart=dISO(wkD[0]),wkEnd=dISO(wkD[4]);
   var html='';
   if(D.isHR&&offen.length>0){
-    html+='<div style="background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px;padding:10px 12px;margin-bottom:12px">';
-    html+='<div style="font-size:12px;font-weight:500;color:#085041;margin-bottom:8px">⏳ Offene Genehmigungen ('+offen.length+')</div>';
+    html+='<div style=\"background:#EAF3DE;border:1px solid #9FE1CB;border-radius:8px;padding:10px 12px;margin-bottom:12px\">';
+    html+='<div style=\"font-size:12px;font-weight:500;color:#085041;margin-bottom:8px\">\u23f3 Offene Genehmigungen ('+offen.length+')</div>';
     offen.forEach(function(e){
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(159,225,203,.5);flex-wrap:wrap">';
-      html+='<span style="flex:1;font-size:12px"><strong>'+getName(e.ma)+'</strong> · '+getMa(e.ma).f+' · '+fmtD(e.von)+(e.bis&&e.bis!==e.von?' – '+fmtD(e.bis):'')+' · '+e.tage+' Tage</span>';
-      html+='<button class="btn btn-ok btn-sm" onclick="approve(\''+e.id+'\')">Genehmigen</button>';
-      html+='<button class="btn btn-err btn-sm" onclick="deny(\''+e.id+'\')">Ablehnen</button>';
+      html+='<div style=\"display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(159,225,203,.5);flex-wrap:wrap\">';
+      html+='<span style=\"flex:1;font-size:12px\"><strong>'+getName(e.ma)+'</strong> \u00b7 '+getMa(e.ma).f+' \u00b7 '+fmtD(e.von)+(e.bis&&e.bis!==e.von?' \u2013 '+fmtD(e.bis):'')+' \u00b7 '+e.tage+' Tage</span>';
+      html+='<button class=\"btn btn-ok btn-sm\" onclick=\"approve(\''+e.id+'\')\">Genehmigen</button>';
+      html+='<button class=\"btn btn-err btn-sm\" onclick=\"deny(\''+e.id+'\')\">Ablehnen</button>';
       html+='</div>';
     });
     html+='</div>';
   }
-  html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
-  [{l:'Heute abwesend',v:abwH.length,sub:abwH.length?abwH.slice(0,3).map(function(e){return getName(e.ma);}).join(', '):'–',c:abwH.length?'#0C447C':undefined},
-   {l:'Offene Anträge',v:offen.length,sub:'ausstehend',c:offen.length?'#633806':undefined},
-   {l:'Einträge gesamt',v:entries.length,sub:STAMM.filter(function(m){return m.on;}).length+' MA aktiv'}
+  html+='<div style=\"display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap\">';
+  [{l:'Heute abwesend',v:abwH.length,sub:abwH.length?abwH.slice(0,3).map(function(e){return getName(e.ma);}).join(', '):'\u2013',c:abwH.length?'#0C447C':undefined},
+   {l:'Offene Antr\u00e4ge',v:offen.length,sub:'ausstehend',c:offen.length?'#633806':undefined},
+   {l:'Eintr\u00e4ge gesamt',v:entries.length,sub:STAMM.filter(function(m){return m.on;}).length+' MA aktiv'}
   ].forEach(function(x){
-    html+='<div class="stat"><div style="font-size:11px;color:#888;margin-bottom:3px">'+x.l+'</div>';
-    html+='<div style="font-size:22px;font-weight:500;line-height:1.1;color:'+(x.c||'#1a1a1a')+'">'+x.v+'</div>';
-    html+='<div style="font-size:11px;color:#aaa;margin-top:3px">'+x.sub+'</div></div>';
+    html+='<div class=\"stat\"><div style=\"font-size:11px;color:#888;margin-bottom:3px\">'+x.l+'</div>';
+    html+='<div style=\"font-size:22px;font-weight:500;line-height:1.1;color:'+(x.c||'#1a1a1a')+'\">' +x.v+'</div>';
+    html+='<div style=\"font-size:11px;color:#aaa;margin-top:3px\">'+x.sub+'</div></div>';
   });
   html+='</div>';
   html+=wochenplanHTML(entries,wkD,wkStart,wkEnd,t,true);
-  var rows=entries.filter(function(e){return D.showPast||((e.bis||e.von)>=t);}).sort(function(a,b){return b.von.localeCompare(a.von);});
-  html+='<div style="display:flex;align-items:center;gap:10px;margin:14px 0 8px;flex-wrap:wrap">';
-  html+='<div style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;flex:1">Alle Abwesenheiten ('+rows.length+')</div>';
-  html+='<button class="btn btn-sm" data-showpast="1">'+(D.showPast?'Nur aktuelle & kommende':'Vergangene einblenden')+'</button></div>';
-  if(rows.length){
-    html+='<div style="overflow-x:auto"><table><thead><tr><th>Mitarbeitende:r</th><th>Art (\u00e4nderbar)</th><th>Von</th><th>Bis</th><th style="text-align:center">Tage</th><th>Status</th><th></th></tr></thead><tbody>';
-    rows.forEach(function(e){
-      var ma=getMa(e.ma);
-      var artSel='<select data-chgart="'+e.id+'" style="width:auto;min-width:120px;padding:3px 6px;font-size:11px">'+ART_ALL.map(function(a){return '<option'+(e.art===a?' selected':'')+'>'+a+'</option>';}).join('')+'</select>';
-      html+='<tr><td><strong>'+getName(e.ma)+'</strong><br><span style="font-size:10px;color:#aaa">'+e.ma+' \u00b7 '+ma.f+'</span></td>';
-      html+='<td>'+artSel+'</td><td>'+fmtD(e.von)+'</td><td>'+fmtD(e.bis||e.von)+'</td>';
-      html+='<td style="text-align:center">'+e.tage+'</td>';
-      html+='<td><span class="badge" style="'+genStyle(e.gen)+'">'+(e.gen||'\u2013')+'</span></td>';
-      html+='<td><button class="btn btn-sm" data-del="'+e.id+'" style="font-size:10px;padding:2px 7px;color:#A32D2D" title="Eintrag l\u00f6schen">\u2715</button></td></tr>';
+  html+='<div style=\"margin-top:20px;border-top:2px solid #e2e8f0;padding-top:14px\">';
+  html+='<div style=\"font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px\">Pers\u00f6nlicher Jahreskalender \u00b7 Klick auf Tag \u2192 Eintrag bearbeiten oder anlegen</div>';
+  var maOpts=STAMM.filter(function(m){return m.on;}).map(function(m){
+    return '<option value=\"'+m.id+'\"'+(D.ov.ma===m.id?' selected':'')+'>'+getName(m.id)+' ('+m.id+')</option>';
+  }).join('');
+  html+='<select data-ov-ma style=\"max-width:340px;margin-bottom:12px\"><option value=\"\">\u2013 Mitarbeitende:n w\u00e4hlen \u2013</option>'+maOpts+'</select>';
+  if(D.ov.ma){
+    var y=2026;
+    var marks={},markIds={};
+    var prioOV={'Urlaub':3,'AU':3,'Krank ohne Attest':3,'Abwesenheit':2};
+    entries.filter(function(e){return e.ma===D.ov.ma&&e.gen!=='Nein';}).forEach(function(e){
+      var d=new Date(e.von+'T12:00:00');var end=new Date((e.bis||e.von)+'T12:00:00');
+      while(d<=end){
+        var ds=dISO(d);
+        if(!marks[ds]||(prioOV[e.art]||1)>=(prioOV[marks[ds]]||1)){marks[ds]=e.art;markIds[ds]=e.id;}
+        d.setDate(d.getDate()+1);
+      }
     });
-    html+='</tbody></table></div>';
-  } else html+='<div style="font-size:12px;color:#aaa;padding:10px">Keine aktuellen oder kommenden Abwesenheiten.</div>';
+    html+='<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px\">';
+    var WD=['Mo','Di','Mi','Do','Fr','Sa','So'];
+    for(var m=0;m<12;m++){
+      html+='<div style=\"border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#fff\">';
+      html+='<div style=\"font-size:11px;font-weight:600;color:'+NAVY+';margin-bottom:5px\">'+MONATE[m]+'</div>';
+      html+='<div style=\"display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font-size:10px;text-align:center\">';
+      WD.forEach(function(w){html+='<div style=\"color:#aaa;font-weight:600;font-size:9px\">'+w+'</div>';});
+      var offset=(new Date(y,m,1).getDay()+6)%7;
+      for(var i=0;i<offset;i++)html+='<div></div>';
+      var last=new Date(y,m+1,0).getDate();
+      for(var day=1;day<=last;day++){
+        var ds=y+'-'+z(m+1)+'-'+z(day);
+        var wd=new Date(y,m,day).getDay();
+        var isWE=(wd===0||wd===6);var isFT=!!FEIERTAGE[ds];
+        var eid=markIds[ds]||'';
+        var st='padding:3px 0;border-radius:3px;';
+        var title=fmtD(ds);
+        if(isFT){st+='background:#f0f0ee;color:#aaa;';title+=' \u00b7 '+FEIERTAGE[ds];}
+        else if(marks[ds]){
+          var a=marks[ds];title+=' · '+a;
+          if(a==='Urlaub')st+='background:#0C447C;color:#fff;font-weight:600;cursor:pointer;';
+          else if(a==='AU')st+='background:#B23A2E;color:#fff;font-weight:600;cursor:pointer;';
+          else if(a==='Krank ohne Attest')st+='background:#D97706;color:#fff;font-weight:600;cursor:pointer;';
+          else st+='background:#7C6B3B;color:#fff;cursor:pointer;';
+        }
+        else if(isWE){st+='color:#ccc;';}
+        else{st+='color:#555;cursor:pointer;';}
+        if(ds===t)st+='outline:2px solid '+NAVY+';outline-offset:-1px;';
+        var oc=(!isWE&&!isFT)?'onclick=\"ovDayClick(\''+ds+'\',\''+eid+'\')\"':'';
+        html+='<div style=\"'+st+'\" '+oc+' title=\"'+title+'\">'+day+'</div>';
+      }
+      html+='</div></div>';
+    }
+    html+='</div>';
+    html+='<div style=\"display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#888;align-items:center\">';
+    html+='<span><span style=\"display:inline-block;width:12px;height:12px;background:#0C447C;border-radius:3px;vertical-align:middle;margin-right:4px\"></span>Urlaub</span>';
+    html+='<span><span style=\"display:inline-block;width:12px;height:12px;background:#B23A2E;border-radius:3px;vertical-align:middle;margin-right:4px\"></span>AU</span>';
+    html+='<span><span style=\"display:inline-block;width:12px;height:12px;background:#D97706;border-radius:3px;vertical-align:middle;margin-right:4px\"></span>Krank ohne Attest</span>';
+    html+='<span><span style=\"display:inline-block;width:12px;height:12px;background:#7C6B3B;border-radius:3px;vertical-align:middle;margin-right:4px\"></span>Abwesenheit/Sonstiges</span>';
+    html+='<span><span style=\"display:inline-block;width:12px;height:12px;background:#f0f0ee;border-radius:3px;vertical-align:middle;margin-right:4px\"></span>Feiertag Berlin</span>';
+    html+='<span style=\"color:#aaa\">\u00b7 Klick auf Arbeitstag = bearbeiten / neu anlegen</span>';
+    html+='</div>';
+  }
+  html+='</div>';
   return html;
 }
 
 function chgArt(id,art){
   var e=D.entries.find(function(x){return x.id===id;});if(!e)return;
+  var prevArt=e.art,prevGen=e.gen,tage=+(e.tage)||0;
   e.art=art;
-  if(ART_GEN.indexOf(art)>=0){if(!e.gen||e.gen==='\u2013')e.gen='Ausstehend';}
-  else e.gen='\u2013';
-  triggerSave();flash(id+' \u2192 '+art);renderNav();renderContent();
+  if(ART_GEN.indexOf(art)>=0){
+    if(!e.gen||e.gen==='\u2013')e.gen='Ausstehend';
+  } else if((art==='AU'||art==='Krank ohne Attest')&&prevGen==='Ja'){
+    e.gen='Ja'; // Best\u00e4tigte AU \u2013 Status beibehalten
+  } else {
+    e.gen='\u2013';
+  }
+  var msg=id+' \u2192 '+art;
+  if(prevArt==='Urlaub'&&prevGen==='Ja'&&tage>0){
+    msg+=' \u00b7 '+tage+' AT Urlaubsguthaben gutgeschrieben \u2713';
+  }
+  triggerSave();flash(msg);renderNav();renderContent();
 }
 
 function wochenplanHTML(entries,wkD,wkStart,wkEnd,t,compact){
@@ -569,16 +629,16 @@ function viewWoche(entries,t){var baseD=new Date(Date.now()+D.weekOff*604800000)
 function viewKonto(entries,t){
   var html='<div style="overflow-x:auto"><table><thead><tr><th>MA_ID</th><th>Code</th><th>Funktion</th><th style="text-align:center">Anspruch</th><th style="text-align:center">Grundansp.</th><th style="text-align:center">Übert. VJ</th><th style="text-align:center">Genommen</th><th style="text-align:center">Geplant</th><th style="text-align:center">Rest</th><th style="min-width:90px">Fortschritt</th></tr></thead><tbody>';
   var totA=0,totG=0,totP=0;
-  STAMM.filter(function(m){return m.on&&m.ju>0;}).forEach(function(ma){
-    var ue=ma.ue||0;var allUrl=entries.filter(function(e){return e.ma===ma.id&&e.art==='Urlaub'&&e.gen==='Ja';});
+  STAMM.filter(function(m){return m.on&&getJu(m.id)>0;}).forEach(function(ma){
+    var ue=ma.ue||0;var juMA=getJu(ma.id);var allUrl=entries.filter(function(e){return e.ma===ma.id&&e.art==='Urlaub'&&e.gen==='Ja';});
     var genT=allUrl.filter(function(e){return e.von<=t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
     var planT=allUrl.filter(function(e){return e.von>t;}).reduce(function(s,e){return s+((+e.tage)||0);},0);
-    var rest=ma.ju-genT-planT;var pct=ma.ju>0?Math.min(110,Math.round((genT+planT)/ma.ju*100)):0;var pctG=ma.ju>0?Math.min(100,Math.round(genT/ma.ju*100)):0;
+    var rest=juMA-genT-planT;var pct=juMA>0?Math.min(110,Math.round((genT+planT)/juMA*100)):0;var pctG=juMA>0?Math.min(100,Math.round(genT/juMA*100)):0;
     var restC=rest<0?'#791F1F':rest<5?'#B45309':'#1a1a1a';
-    totA+=ma.ju;totG+=genT;totP+=planT;
+    totA+=juMA;totG+=genT;totP+=planT;
     html+='<tr'+(rest<0?' style="background:#FFF0F0"':ue>0?' style="background:#FFFBE6"':'')+'>'; 
     html+='<td><strong>'+getName(ma.id)+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.id+'</span></td><td><span class="badge" style="background:#f1efe8;color:#5f5e5a">'+ma.c+'</span></td><td style="font-size:11px;color:#555">'+ma.f+'</td>';
-    html+='<td style="text-align:center;font-weight:600">'+ma.ju+'</td><td style="text-align:center;color:#555">'+ma.b+'</td><td style="text-align:center;font-weight:'+(ue>0?'600':'400')+';color:'+(ue>0?'#085041':'#ccc')+'">'+ue+'</td>';
+    html+='<td style="text-align:center;font-weight:600">'+juMA+'</td><td style="text-align:center;color:#555">'+ma.b+'</td><td style="text-align:center;font-weight:'+(ue>0?'600':'400')+';color:'+(ue>0?'#085041':'#ccc')+'">'+ue+'</td>';
     html+='<td style="text-align:center;font-weight:500;color:#0C447C">'+(genT||'—')+'</td><td style="text-align:center;color:#888">'+(planT||'—')+'</td>';
     html+='<td style="text-align:center;font-weight:600;color:'+restC+'">'+rest+'</td>';
     html+='<td><div style="position:relative;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden;min-width:80px"><div style="position:absolute;left:0;top:0;height:100%;width:'+Math.min(100,pct)+'%;background:#B5D4F4;border-radius:4px"></div><div style="position:absolute;left:0;top:0;height:100%;width:'+pctG+'%;background:'+NAVY+';border-radius:4px"></div></div><div style="font-size:9px;color:#aaa;text-align:right;margin-top:1px">'+pctG+'%</div></td></tr>';
@@ -615,7 +675,7 @@ function kontoMonatsdetail(entries,t){
 
   // Tages-Markierungen: dateISO -> Art (Urlaub/AU haben Vorrang vor Sonstigem)
   var marks={};
-  var prio={'Urlaub':3,'AU':3,'Abwesenheit':2};
+  var prio={'Urlaub':3,'AU':3,'Krank ohne Attest':3,'Abwesenheit':2};
   entries.filter(function(e){return e.ma===km.ma&&e.gen!=='Nein';}).forEach(function(e){
     var d=new Date(e.von+'T12:00:00');var end=new Date((e.bis||e.von)+'T12:00:00');
     while(d<=end){
@@ -628,7 +688,7 @@ function kontoMonatsdetail(entries,t){
   var sumU=0,sumA=0;
   entries.filter(function(e){return e.ma===km.ma;}).forEach(function(e){
     if(e.art==='Urlaub'&&e.gen==='Ja')sumU+=(+e.tage)||0;
-    if(e.art==='AU'||e.art==='Abwesenheit')sumA+=(+e.tage)||0;
+    if(e.art==='AU'||e.art==='Krank ohne Attest'||e.art==='Abwesenheit')sumA+=(+e.tage)||0;
   });
 
   html+='<div style="font-size:12px;font-weight:600;color:'+NAVY+';margin-bottom:8px">'+getName(km.ma)+' \u00b7 Kalender '+y+'</div>';
@@ -651,7 +711,9 @@ function kontoMonatsdetail(entries,t){
       else if(marks[ds]){
         var a=marks[ds];title+=' \u00b7 '+a;
         if(a==='Urlaub')st+='background:#0C447C;color:#fff;font-weight:600;';
-        else if(a==='AU'||a==='Abwesenheit')st+='background:#B23A2E;color:#fff;font-weight:600;';
+        else if(a==='AU')st+='background:#B23A2E;color:#fff;font-weight:600;';
+        else if(a==='Krank ohne Attest')st+='background:#D97706;color:#fff;font-weight:600;';
+        else if(a==='Abwesenheit')st+='background:#7C6B3B;color:#fff;font-weight:600;';
         else st+='background:#EF9F27;color:#fff;';
       }
       else if(wd===0||wd===6)st+='color:#ccc;';
@@ -665,16 +727,18 @@ function kontoMonatsdetail(entries,t){
   // Legende + Summen
   html+='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#888;align-items:center">';
   html+='<span><span style="display:inline-block;width:12px;height:12px;background:#0C447C;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Urlaub</span>';
-  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#B23A2E;border-radius:3px;vertical-align:middle;margin-right:4px"></span>AU / Abwesenheit</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#B23A2E;border-radius:3px;vertical-align:middle;margin-right:4px"></span>AU</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#D97706;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Krank ohne Attest</span>';
+  html+='<span><span style="display:inline-block;width:12px;height:12px;background:#7C6B3B;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Abwesenheit</span>';
   html+='<span><span style="display:inline-block;width:12px;height:12px;background:#EF9F27;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Sonstige Art</span>';
   html+='<span><span style="display:inline-block;width:12px;height:12px;background:#f0f0ee;border-radius:3px;vertical-align:middle;margin-right:4px"></span>Feiertag Berlin</span>';
   html+='</div>';
-  var rest=ma.ju-sumU;
+  var juKM=getJu(km.ma);var rest=juKM-sumU;
   var restC=rest<0?'#791F1F':rest<5?'#B45309':'#085041';
   html+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">';
   html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Urlaub genehmigt</div><div style="font-size:20px;font-weight:500;color:#0C447C">'+sumU+' AT</div></div>';
-  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">AU / Abwesenheit</div><div style="font-size:20px;font-weight:500;color:#B23A2E">'+sumA+' AT</div></div>';
-  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Anspruch 2026</div><div style="font-size:20px;font-weight:500;color:#1a1a1a">'+ma.ju+' AT</div></div>';
+  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">AU / Krank</div><div style="font-size:20px;font-weight:500;color:#B23A2E">'+sumA+' AT</div></div>';
+  html+='<div class="stat" style="flex:0 0 160px"><div style="font-size:11px;color:#888">Anspruch 2026</div><div style="font-size:20px;font-weight:500;color:#1a1a1a">'+juKM+' AT</div></div>';
   html+='<div class="stat" style="flex:0 0 160px;background:'+(rest<0?'#FFF0F0':rest<5?'#FFFBE6':'#f5faf5')+'">';
   html+='<div style="font-size:11px;color:#888">Verbleibend</div>';
   html+='<div style="font-size:20px;font-weight:600;color:'+restC+'">'+rest+' AT</div></div>';
@@ -687,8 +751,8 @@ function isFest(ma){return ma&&ma.c&&ma.c.indexOf('AE')!==0;}
 
 function exportAAG(){
   var y=2026;
-  var rows=[['Monat','Gruppe','MA_ID','Name','AU-Arbeitstage im Monat','Zeitraum gesamt']];
-  var auE=D.entries.filter(function(e){return e.art==='AU'||e.art==='Abwesenheit';});
+  var rows=[['Monat','Gruppe','MA_ID','Name','Krank-AT im Monat (AU+Attest)','Zeitraum gesamt']];
+  var auE=D.entries.filter(function(e){return e.art==='AU'||e.art==='Krank ohne Attest';});
   for(var m=0;m<12;m++){
     var fest=[],ext=[],sF=0,sE=0;
     auE.forEach(function(e){
@@ -857,7 +921,7 @@ function viewStammdaten(){
   aktiv.forEach(function(ma,i){
     var val=(D.namen[ma.id]||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
     rows+='<div style="display:grid;grid-template-columns:130px 1fr;gap:8px;align-items:center;margin-bottom:6px">'
-      +'<div><strong>'+ma.id+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.c+' &middot; '+ma.f+'</span><br><span style="font-size:10px;color:#0C447C">'+(ma.wh||0)+' h/Wo &middot; JU '+ma.ju+'</span></div>'
+      +'<div><strong>'+ma.id+'</strong><br><span style="font-size:10px;color:#aaa">'+ma.c+' &middot; '+ma.f+'</span><br>'      +'<span style="font-size:10px;color:#0C447C">'+(ma.wh||0)+' h/Wo &middot; JU '      +'<strong style="color:'+(D.juConfig.hasOwnProperty(ma.id)?'#085041':'#0C447C')+'">'+getJu(ma.id)+'</strong>'      +' <button onclick="editJu(\''+ma.id+'\')" style="background:none;border:none;cursor:pointer;font-size:11px;padding:0 2px;color:#0C447C" title="JU anpassen">✎</button>'      +'</span></div>'
       +'<input type="text" data-maid="'+ma.id+'" value="'+val+'" placeholder="Vorname Nachname"'
       +' style="padding:7px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%">'
       +'</div>';
@@ -934,6 +998,26 @@ function saveEntry(){
 
 function editEntry(id){var e=D.entries.find(function(x){return x.id===id;});if(!e)return;D.uf={ma:e.ma,art:e.art,von:e.von,bis:e.bis,gen:e.gen,kom:e.kom||''};D.editId=id;G.view('eingabe');}
 function cancelEdit(){D.editId=null;D.uf={ma:'',art:'Urlaub',von:'',bis:'',gen:'Ausstehend',kom:''};renderContent();}
+function editJu(id){
+  var cur=getJu(id);
+  var v=prompt('Jahresurlaub 2026 für '+id+' (Arbeitstage):',cur);
+  if(v===null)return;
+  var n=parseInt(v,10);
+  if(isNaN(n)||n<0){flash('Ungültige Eingabe','err');return;}
+  var stamm=getMa(id).ju||0;
+  if(n===stamm){delete D.juConfig[id];}else{D.juConfig[id]=n;}
+  triggerSave();renderContent();flash('JU '+id+' → '+n+' AT gesetzt ✓');
+}
+function ovDayClick(ds,eid){
+  if(eid){editEntry(eid);}
+  else{
+    var wd=new Date(ds+'T12:00:00').getDay();
+    if(wd===0||wd===6)return;
+    D.uf={ma:D.ov.ma,art:'Urlaub',von:ds,bis:ds,gen:'Ausstehend',kom:''};
+    D.editId=null;G.view('eingabe');
+  }
+}
+
 function delEntry(id){if(!confirm('Eintrag '+id+' löschen?'))return;D.entries=D.entries.filter(function(e){return e.id!==id;});flash('Eintrag '+id+' gelöscht');triggerSave();renderNav();renderContent();}
 function approve(id){var e=D.entries.find(function(x){return x.id===id;});if(e){e.gen='Ja';triggerSave();flash('Genehmigt: '+id);renderNav();renderContent();}}
 function deny(id){var e=D.entries.find(function(x){return x.id===id;});if(e){e.gen='Nein';triggerSave();flash('Abgelehnt: '+id);renderNav();renderContent();}}
@@ -946,12 +1030,12 @@ async function forceSyncNow(){
   var cloud=await cloudLoad();
   var merged=mergeData({entries:D.entries,nid:D.nid,namen:D.namen},cloud);
   D.entries=merged.entries;D.nid=merged.nid;D.namen=merged.namen||D.namen||{};
-  await cloudSave({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()});
+  await cloudSave({entries:D.entries,nid:D.nid,namen:D.namen,juConfig:D.juConfig,ts:new Date().toISOString()});
   render();flash('Sync abgeschlossen ✓');
 }
 
-function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
-function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;if(p.namen)D.namen=p.namen;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
+function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,juConfig:D.juConfig,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
+function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;if(p.namen)D.namen=p.namen;if(p.juConfig)D.juConfig=p.juConfig;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
 function exportCSV(){var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbeitstage','Genehmigt','Kommentar']];D.entries.forEach(function(e){var ma=getMa(e.ma);rows.push([e.id,e.ma,ma.f,e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);});var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.csv';a.click();URL.revokeObjectURL(url);flash('CSV-Export ✓');}
 
 // ═══════════════════════════════════════════════════════
@@ -962,6 +1046,7 @@ document.addEventListener('change',function(ev){
   var s=ev.target.closest('select');if(!s)return;
   if(s.hasAttribute('data-chgart')){chgArt(s.getAttribute('data-chgart'),s.value);}
   else if(s.hasAttribute('data-km-ma')){D.km.ma=s.value;renderContent();}
+  else if(s.hasAttribute('data-ov-ma')){D.ov.ma=s.value;renderContent();}
 });
 document.addEventListener('click',function(ev){
   var b=ev.target.closest('button');if(!b)return;
