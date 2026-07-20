@@ -1,6 +1,6 @@
 <!-- ═══════════════════════════════════════════════════
-  GETEQ Abwesenheitsdashboard · VERSION 3.4 · Stand 09.07.2026
-  v3.4: Interaktiver Jahreskalender in Übersicht · Krank ohne Attest · Alle Einträge
+  GETEQ Abwesenheitsdashboard · VERSION 3.5 · Stand 20.07.2026
+  v3.5: CSV-Filter (Art + Gruppe + Zeitraum) · Sidebar Zuletzt erfasst
   v3.3: JU editierbar im Dashboard · Urlaub→AU Gutschrift · STAMM-Korrekturen
   v3.2: Resturlaub-Anzeige im Einzelkalender (Anspruch / Verbleibend)
   v3.1: Jahreskalender-Ansicht (12 Monate) im Urlaubskonto pro Mitarbeitende:r
@@ -134,7 +134,7 @@ tr:hover>td{background:#f5f3ee}
     <div class="login-hint">Melde dich mit deiner @geteq.org Adresse an.<br>Beim ersten Mal erscheint ein Microsoft-Popup.</div>
     <div class="offline-link" onclick="offlineMode()">Offline-Modus (kein Sync)</div>
   </div>
-  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.4</div>
+  <div style="color:#4a6fa8;font-size:10px;margin-top:20px">GETEQ gGmbH · Berlin 2026 · Dashboard v3.5</div>
 </div>
 
 <!-- APP -->
@@ -322,7 +322,7 @@ function setSyncStatus(type, txt) {
 // ═══════════════════════════════════════════════════════
 var PIN_HR = '2000';
 var NAVY   = '#1A2E5A';
-var VERSION = '3.4';
+var VERSION = '3.5';
 
 var FEIERTAGE = {
   '2026-01-01':'Neujahr','2026-03-08':'Internationaler Frauentag',
@@ -456,7 +456,7 @@ function renderHeader(){
     '<span id="sync-status" class="sync-dot '+(cloudEnabled?'ok':'err')+'">'+(cloudEnabled?'☁ Verbunden':'Offline')+'</span>'+
     '<span class="user-chip">'+userName+'</span>'+
     (D.isHR?'<span class="hr-badge">HR aktiv</span>':'<button class="hbtn" onclick="hrUnlock()">HR-Modus</button>')+
-    '<button class="hbtn" onclick="exportCSV()">↓ CSV</button>'+
+    '<button class="hbtn" onclick="openCSVFilter()">↓ CSV</button>'+
     '<button class="hbtn" onclick="exportJSON()">↓ JSON</button>'+
     '<button class="hbtn" onclick="doLogout()">⏏</button>'+
     '<span style="color:#B5D4F4;font-size:11px">'+d+'</span>'+
@@ -812,10 +812,10 @@ function viewEingabe(entries,t){
     else html+='<div style="font-size:12px;color:#aaa">Keine Einträge</div>';
     html+='</div>';
   }
-  var sortEnt=entries.slice().sort(function(a,b){return b.von.localeCompare(a.von);}).slice(0,15);
-  html+='<div class="card" style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Alle Einträge ('+entries.length+')</div>';
+  var sortEnt=entries.slice().sort(function(a,b){return b.id.localeCompare(a.id);}).slice(0,30);
+  html+='<div class="card" style="margin-top:12px"><div style="font-size:11px;font-weight:600;color:#888;margin-bottom:8px">Zuletzt erfasst ('+Math.min(entries.length,30)+' / '+entries.length+')</div>';
   if(sortEnt.length){sortEnt.forEach(function(e){html+='<div style="display:flex;align-items:center;gap:5px;padding:4px 0;border-bottom:1px solid #f0f0ee;font-size:11px;flex-wrap:wrap"><strong>'+e.ma+'</strong><span class="badge" style="'+artStyle(e.art)+'">'+e.art+'</span><span style="flex:1;color:#888">'+fmtD(e.von)+'</span><span class="badge" style="'+genStyle(e.gen)+'">'+e.gen+'</span><button class="btn btn-sm" onclick="delEntry(\''+e.id+'\')" style="font-size:10px;padding:2px 6px;color:#A32D2D">✕</button></div>';});
-  if(entries.length>15)html+='<div style="font-size:10px;color:#aaa;margin-top:4px">+'+( entries.length-15)+' weitere</div>';}
+  if(entries.length>30)html+='<div style="font-size:10px;color:#aaa;margin-top:4px">+'+( entries.length-30)+' weitere</div>';}
   else html+='<div style="font-size:12px;color:#aaa">Noch keine Einträge</div>';
   html+='</div></div></div>';
   return html;
@@ -1037,6 +1037,62 @@ async function forceSyncNow(){
 function exportJSON(){var json=JSON.stringify({entries:D.entries,nid:D.nid,namen:D.namen,juConfig:D.juConfig,ts:new Date().toISOString()},null,2);var blob=new Blob([json],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.json';a.click();URL.revokeObjectURL(url);flash('Export gestartet ✓');}
 function doImportFile(inp){var f=inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(e){try{var p=JSON.parse(e.target.result);if(!Array.isArray(p.entries))throw new Error('Feld "entries" fehlt');D.entries=p.entries;D.nid=p.nid||D.nid;if(p.namen)D.namen=p.namen;if(p.juConfig)D.juConfig=p.juConfig;triggerSave();render();flash('Import: '+p.entries.length+' Einträge ✓');}catch(err){flash('Importfehler: '+err.message,'err');}};r.readAsText(f);inp.value='';}
 function exportCSV(){var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbeitstage','Genehmigt','Kommentar']];D.entries.forEach(function(e){var ma=getMa(e.ma);rows.push([e.id,e.ma,ma.f,e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);});var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='GETEQ_Abwesenheiten_'+today()+'.csv';a.click();URL.revokeObjectURL(url);flash('CSV-Export ✓');}
+
+function openCSVFilter(){
+  var artOpts=ART_ALL.map(function(a){return '<label style="display:flex;align-items:center;gap:7px;margin-bottom:5px;cursor:pointer;font-size:13px"><input type="checkbox" class="cfc-art" value="'+a+'" checked> '+a+'</label>';}).join('');
+  var html='<div id="csvModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center" onclick="if(event.target.id===\'csvModal\')closeCsvModal()">'+
+    '<div style="background:#fff;border-radius:12px;padding:24px 28px;width:460px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,0.18)">'+
+    '<div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-bottom:18px">CSV exportieren – Filter</div>'+
+    '<div style="margin-bottom:16px">'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Art der Abwesenheit</div>'+
+    artOpts+
+    '</div>'+
+    '<div style="margin-bottom:16px">'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Mitarbeitergruppe</div>'+
+    '<label style="display:flex;align-items:center;gap:7px;margin-bottom:5px;cursor:pointer;font-size:13px"><input type="checkbox" id="cfc-fest" checked> Festangestellte</label>'+
+    '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px"><input type="checkbox" id="cfc-aussen" checked> Außenplätze (extern)</label>'+
+    '</div>'+
+    '<div style="margin-bottom:20px">'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Zeitraum (optional)</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Von</div><input type="date" id="cfc-von" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;box-sizing:border-box"></div>'+
+    '<div><div style="font-size:12px;color:#94a3b8;margin-bottom:4px">Bis</div><input type="date" id="cfc-bis" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;box-sizing:border-box"></div>'+
+    '</div></div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+    '<button onclick="closeCsvModal()" style="padding:8px 18px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;color:#64748b">Abbrechen</button>'+
+    '<button onclick="exportCSVGefiltert()" style="padding:8px 18px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">↓ CSV exportieren</button>'+
+    '</div>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function closeCsvModal(){var m=document.getElementById('csvModal');if(m)m.remove();}
+
+function exportCSVGefiltert(){
+  var artChecked=[];
+  document.querySelectorAll('.cfc-art:checked').forEach(function(cb){artChecked.push(cb.value);});
+  var inkFest=document.getElementById('cfc-fest').checked;
+  var inkAussen=document.getElementById('cfc-aussen').checked;
+  var vonF=document.getElementById('cfc-von').value;
+  var bisF=document.getElementById('cfc-bis').value;
+  var filtered=D.entries.filter(function(e){
+    if(!artChecked.includes(e.art))return false;
+    var isAussen=/^MA-A/.test(e.ma);
+    if(isAussen&&!inkAussen)return false;
+    if(!isAussen&&!inkFest)return false;
+    if(vonF&&e.bis&&e.bis<vonF)return false;
+    if(bisF&&e.von>bisF)return false;
+    return true;
+  });
+  if(!filtered.length){flash('Keine Einträge für diese Filterauswahl','err');return;}
+  var rows=[['ID','MA_ID','Funktion','Art','Von','Bis','Arbeitstage','Genehmigt','Kommentar']];
+  filtered.forEach(function(e){var ma=getMa(e.ma);rows.push([e.id,e.ma,ma.f,e.art,fmtD(e.von),fmtD(e.bis||e.von),e.tage,e.gen||'–',e.kom||'']);});
+  var csv=rows.map(function(r){return r.map(function(c){return'"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;
+  a.download='GETEQ_Abwesenheiten_gefiltert_'+today()+'.csv';a.click();URL.revokeObjectURL(url);
+  closeCsvModal();flash('CSV-Export: '+filtered.length+' Einträge ✓');
+}
 
 // ═══════════════════════════════════════════════════════
 //  START
